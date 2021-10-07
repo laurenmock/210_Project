@@ -1,0 +1,239 @@
+---
+title: "Week 5 lab BST 210"
+author: "Daniel Herrera"
+date: "9/30/2021"
+output: html_document
+---
+
+### Question 10
+
+**Complete an initial round of exploratory analyses on your data that would be relevant to your plan and responses above, and include any plots, summaries, code and output.  Please include exploratory analysis for outcome(s) of continuous form however/wherever possible even if your ultimate goals/questions involve a different form of outcome data such as binary, polytomous, etc.  (You may consider this initial analysis as a potential sub-analysis later on.)**
+
+```{r, warning=FALSE, message = FALSE}
+library(tidyverse)
+library(pander)
+library(ggthemes)
+library(gtools)
+library(splitstackshape)
+library(ResourceSelection)
+library(LogisticDx)
+
+bone <- read.csv("data.csv")
+```
+
+Before we begin with any visualizations and summary statistics, I would like to explore  missing-ness within our data set. 
+
+```{r}
+
+# lets look at a table o fall missing values
+colSums(is.na(bone))
+```
+
+Great, no missing data (spoiler: there is). Oh wait, there are "?" marks that we should examine. We see that there are actually a bit of "?" in our data set, so this may need to be addressed later, particularly for variables such as recipient CMV (14 ?'s), CMV_status (16) and extensive_chronic_GvHD (31 ?'s). For now, we will replace the "?" in the data set.
+
+```{r}
+# let us see the number of ?'s that appear
+sort(colSums(bone == "?"), decreasing = TRUE) [1:10]
+
+
+
+# replace ?'s with true NA's
+bone <- mutate_all(bone, ~replace(., . == "?", NA))
+
+# Now we can see all of the ?'s have been replaced with NA values that are picked up
+colSums(is.na(bone))
+```
+
+
+#Dealing with missing values
+
+Let's make sure our missing values do not exceed 5% of our total data
+
+Here we see that we have a total of 3.3% of our data cells missing from our total data set, which is less than 5%! So we can continue
+```{r}
+(81/(13*187)) * 100
+```
+
+
+
+Now, with those issues addressed, we can explore some more standard EDA. Lets familiarize ourselves with the data set by  briefly viewing all the columns, column types, a brief amount of data. We can then explore summary statistics. Note: we will have to change some of our data from character data to numeric data. 
+
+
+#Basic Data Exploration
+
+##Numerical Variables: 
+donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time
+
+##Categorical Variables: 
+donor_ABO, recipient_age_int, recipient_ABO, disease, CMV_status, HLA_match..out.of.10., antigen, allele, HLA_group_1 
+
+##Binary Variables:
+donor_age_below_35 (yes/no), donor_CMV (present/absent), recipient_age_below_10 (yes/no), recipient_rh (plus/minus), recipient_CMV (present/absent), disease_group (malignant/nonmalignant), gender_match(female_to_male/other), ABO_match (matched/mismatched), HLA_mismatch (matched, mismatched), risk_group (high/low), stem_cell_source (peripheral_blood/bone_marrow),tx_post_relapse (yes/no), acute_GvHD_II_III_IV (yes/no), acute_GvHD_III_IV (yes/no), extensive_chronic_GvHD (yes/no), relapse (yes/no), survival_status (yes,no)
+
+Some summary statistics
+```{r}
+glimpse(bone)
+summary(bone$donor_age)
+```
+
+
+
+Let's view some basic information about our donors for bone marrow transplants (age, blood type, cytomegalovirus status). 
+
+So far we can see the following:
+
+1) most of our donors are within 20 and 40 years old
+2) donors' blood types are as follows: type O (39.0%), type A (38.0%), type AB (8.0%), B (15.0%)
+3) donors' cmv status follows: absent (60.4%), present (38.5%), missing (0.1%)
+
+```{r}
+# summary stats for blood type
+bone %>% 
+  group_by(donor_ABO) %>% 
+  summarise(n = length(donor_ABO),
+            proportion = length(donor_ABO)/nrow(bone))
+
+# summary stats for donor cytomegalovirus status
+bone %>% 
+  group_by(donor_CMV) %>% 
+  summarise(n = length(donor_CMV),
+            proportion = length(donor_CMV)/nrow(bone))
+
+# plot histogram of age distribution
+bone %>% 
+ggplot(aes(x = donor_age)) + 
+  geom_histogram(fill = "#990000", col = "black", binwidth = 5) + 
+  ggtitle("Age of donors", ) +
+  xlab("Age") +
+  ylab("Count") +
+  theme_wsj()+ theme(axis.title=element_text(size=12))
+
+```
+
+
+Let us explore the same characteristics in our bone marrow transplant recipients. 
+
+Let's view some basic information about our recipients for bone marrow transplants (age, blood type, cytomegalovirus status).
+
+
+
+So far we can see the following:
+
+1) our recipients are mostly between 5 and 15 years old (min age is 0.6 years old and max age is 20 years old)
+2) recipients' blood types are as follows: type O (25.7%), type A (40.1%), type AB (7.0%), B (26.7%), NA (0.5%)
+3) recipients' cmv status follows: absent (39.0%), present (53.5%), missing (7.5%)
+
+```{r}
+
+summary(bone$recipient_age)
+
+# summary stats for blood type
+bone %>% 
+  group_by(recipient_ABO) %>% 
+  summarise(n = length(recipient_ABO),
+            proportion = length(recipient_ABO)/nrow(bone))
+
+# summary stats for recipient cytomegalovirus status
+bone %>% 
+  group_by(recipient_CMV) %>% 
+  summarise(n = length(recipient_CMV),
+            proportion = length(recipient_CMV)/nrow(bone))
+
+# plot histogram of age distribution
+bone %>% 
+ggplot(aes(x = recipient_age)) + 
+  geom_histogram(fill = "#990000", col = "black", binwidth = 5) + 
+  ggtitle("Age of recipients", ) +
+  xlab("Age") +
+  ylab("Count") +
+  theme_wsj()+ theme(axis.title=element_text(size=12))
+
+```
+
+
+Now, let's take a look at recipient body mass, recipient rh factor (+ or -) and the risk group. Note: Changed data type of recipient body mass from character to numeric
+
+
+(Assuming body mass has units of lbs)
+So far we can see the following:
+
+1) our recipients are have a body mass mostly between 15lbs to 60lbs (min body mass is 6 lbs and max body mass is 103.4 lbs)
+2) recipients' rh factor are as follows: plus (84.5%), minus (14.4%), NA (1.1%)
+3) risk status follows: high (36.9%), low (63.1%)
+
+```{r}
+# plot histogram of body mass distribution
+bone %>% 
+ggplot(aes(x = as.numeric(recipient_body_mass))) + 
+  geom_histogram(fill = "#990000", col = "black", binwidth = 5) + 
+  ggtitle("Body mass of recipients", ) +
+  xlab("Body Mass") +
+  ylab("Count") +
+  theme_wsj()+ theme(axis.title=element_text(size=12))
+
+
+
+# summary stats for recipient rh factor
+bone %>% 
+  group_by(recipient_rh) %>% 
+  summarise(n = length(recipient_rh),
+            proportion = length(recipient_rh)/nrow(bone))
+
+# summary stats for recipient risk group
+bone %>% 
+  group_by(risk_group) %>% 
+  summarise(n = length(risk_group),
+            proportion = length(risk_group)/nrow(bone))
+```
+
+
+Looking only at the continous numerical variables next:
+
+We see at first glance based off of the correlation scatter plots that recipient age and body mass are very highly correlated
+```{r}
+bone_num <- bone %>% select(c(donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time))
+
+bone_num <- lapply(bone_num, as.numeric)
+```
+
+```{r, fig.height=10, fig.width=10}
+pairs(bone_num)
+```
+
+
+
+
+**From here we can explore variables that track the match between the donors and recepients (match) and make note of the potential multicollinearity here.** 
+
+Match vs. mismatch
+
+
+**then we can run some correlation coeffs, get some plots with two variables.** 
+
+
+Explore survival by individual factors
+
+1. Change survival to categorical variable
+```{r}
+bone$survival_status <- as.factor(bone$survival_status)
+
+bone %>% 
+ggplot(aes(x = survival_status)) + 
+  geom_histogram(fill = "#990000", col = "black", binwidth = 5, stat = "count") + 
+  ggtitle("Survival Status", ) +
+  xlab("Survival") +
+  ylab("Count") +
+  theme_wsj()+ theme(axis.title=element_text(size=12))
+```
+
+
+
+```{r}
+table(bone$survival_status)
+prop.table(table(bone$survival_status))
+```
+
+
+
+
+
