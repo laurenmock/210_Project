@@ -32,27 +32,29 @@ The source of this data set can be found here:
 
 And a downloadable version of the data set can be found here: (https://www.kaggle.com/adamgudys/bone-marrow-transplant-children).
 
-### Question 3
+## Question 3
+
+**Primary questions**
+
+Our primary goals are to predict (before transplantation) whether or not a patient will survive, and to understand which factors are the most important in determining survival. We are particularly interested in determining the importance of the closeness of the match between the recipient and the donor for survival. 
+
+## Question 4
+
+## Question 5
+
+## Question 6
+
+## Question 7
+
+## Question 8
+
+## Question 9
 
 
 
-### Question 4
-
-### Question 5
-
-### Question 6
-
-### Question 7
-
-### Question 8
-
-### Question 9
 
 
-
-
-
-### Question 10
+## Question 10
 
 **Complete an initial round of exploratory analyses on your data that would be relevant to your plan and responses above, and include any plots, summaries, code and output.  Please include exploratory analysis for outcome(s) of continuous form however/wherever possible even if your ultimate goals/questions involve a different form of outcome data such as binary, polytomous, etc.  (You may consider this initial analysis as a potential sub-analysis later on.)**
 
