@@ -75,7 +75,7 @@ We will all be using R.
 
 ## Question 10
 
-**Complete an initial round of exploratory analyses on your data that would be relevant to your plan and responses above, and include any plots, summaries, code and output.  Please include exploratory analysis for outcome(s) of continuous form however/wherever possible even if your ultimate goals/questions involve a different form of outcome data such as binary, polytomous, etc.  (You may consider this initial analysis as a potential sub-analysis later on.)**
+**Complete an initial round of exploratory analyses on your data that would be relevant to your plan and responses above, and include any plots, summaries, code and output.  Please include exploratory analysis for outcome(s) of continuous form however/wherever possible even if your ultimate goals/questions involve a different form of outcome data such as binary, polytomous, etc. (You may consider this initial analysis as a potential sub-analysis later on.)**
 
 ```{r, warning=FALSE, message = FALSE}
 library(tidyverse)
@@ -642,6 +642,7 @@ acute_GvHD_II_III_IV (yes/no) - not a huge difference in survival chances if acu
 acute_GvHD_III_IV (yes/no) - same for this variable
 extensive_chronic_GvHD (yes/no) - development of chronic acute GVHD increases chances of death drastically
 relapse (yes/no) - as we figured, occurence of relapse decrease survival chances drastically
+
 ```{r, fig.height=10, fig.width=10}
 par(mfrow = c(4,4))
 
