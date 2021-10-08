@@ -187,6 +187,10 @@ bone %>%
 ```
 
 
+
+
+
+
 Looking only at the continous numerical variables next:
 
 We see at first glance based off of the correlation scatter plots that recipient age and body mass are very highly correlated
@@ -211,9 +215,12 @@ Match vs. mismatch
 **then we can run some correlation coeffs, get some plots with two variables.** 
 
 
-Explore survival by individual factors
 
-1. Change survival to categorical variable
+
+
+Exploratory analysis on outcome variable (survival_status)
+
+1. Change survival to binary (instead of numerical)
 ```{r}
 bone$survival_status <- as.factor(bone$survival_status)
 
@@ -224,8 +231,127 @@ ggplot(aes(x = survival_status)) +
   xlab("Survival") +
   ylab("Count") +
   theme_wsj()+ theme(axis.title=element_text(size=12))
+
+
+bone %>% 
+  group_by(survival_status) %>% 
+  summarise(n = length(survival_status),
+            proportion = length(survival_status)/nrow(bone))
 ```
 
+
+2. Look at binary outcome with continuous predictors
+
+donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time
+
+```{r}
+bone %>% 
+  ggplot(aes(x = survival_status, y = donor_age)) +
+  geom_boxplot(fill = "#990000", col = "black") +
+  ggtitle("Survival Status based on Age of Donor") +
+  xlab("Survival Status") +
+  ylab("Age of Donor") +
+  theme_wsj()+ theme(axis.title=element_text(size=12),
+                     plot.title = element_text(size = 20))
+
+
+bone %>% 
+  ggplot(aes(x = survival_status, y = recipient_age)) +
+  geom_boxplot(fill = "#990000", col = "black") +
+  ggtitle("Survival Status based on Age of Recipient") +
+  xlab("Survival Status") +
+  ylab("Age of Recipient") +
+  theme_wsj()+ theme(axis.title=element_text(size=12),
+                     plot.title = element_text(size = 20))
+
+
+bone %>% 
+  ggplot(aes(x = survival_status, y = as.numeric(recipient_body_mass))) +
+  geom_boxplot(fill = "#990000", col = "black") +
+  ggtitle("Survival Status based on Recipient Body Mass") +
+  xlab("Survival Status") +
+  ylab("Recipient Body Mass") +
+  theme_wsj()+ theme(axis.title=element_text(size=12),
+                     plot.title = element_text(size = 15))
+
+
+bone %>% 
+  ggplot(aes(x = survival_status, y = as.numeric(CD34_x1e6_per_kg...CD34kgx10d6))) +
+  geom_boxplot(fill = "#990000", col = "black") +
+  ggtitle("Survival Status based on CD34+ Dosage") +
+  xlab("Survival Status") +
+  ylab("CD34+ Dosage") +
+  theme_wsj()+ theme(axis.title=element_text(size=12),
+                     plot.title = element_text(size = 20))
+
+
+bone %>% 
+  ggplot(aes(x = survival_status, y = as.numeric(CD3_x1e8_per_kg))) +
+  geom_boxplot(fill = "#990000", col = "black") +
+  ggtitle("Survival Status based on CD3+ Dosage") +
+  xlab("Survival Status") +
+  ylab("CD3+ Dosage") +
+  theme_wsj()+ theme(axis.title=element_text(size=12),
+                     plot.title = element_text(size = 20))
+
+
+bone %>% 
+  ggplot(aes(x = survival_status, y = as.numeric(CD3_to_CD34_ratio))) +
+  geom_boxplot(fill = "#990000", col = "black") +
+  scale_y_continuous(trans = "log") +
+  ggtitle("Survival Status based on CD3+:CD34+ Ratio") +
+  xlab("Survival Status") +
+  ylab("CD3+:CD34+ Ratio") +
+  theme_wsj()+ theme(axis.title=element_text(size=12),
+                     plot.title = element_text(size = 15))
+
+
+
+#Probably leaving these out (weird values) -------------------------------------------------
+
+#bone %>% 
+#  ggplot(aes(x = survival_status, y = as.numeric(ANC_recovery))) +
+#  geom_boxplot(fill = "#990000", col = "black") +
+#  scale_y_continuous(trans = "log") +
+#  ggtitle("Survival Status based on ANC recovery") +
+#  xlab("Survival Status") +
+#  ylab("ANC recovery") +
+#  theme_wsj()+ theme(axis.title=element_text(size=12),
+#                     plot.title = element_text(size = 20))
+
+
+#bone %>% 
+#  ggplot(aes(x = survival_status, y = as.numeric(PLT_recovery))) +
+#  geom_boxplot(fill = "#990000", col = "black") +
+#  scale_y_continuous(trans = "log") +
+#  ggtitle("Survival Status based on PLT recovery") +
+#  xlab("Survival Status") +
+#  ylab("PLT Recovery") +
+#  theme_wsj()+ theme(axis.title=element_text(size=12),
+#                     plot.title = element_text(size = 15))
+
+
+#bone %>% 
+#  ggplot(aes(x = survival_status, y = as.numeric(time_to_acute_GvHD_III_IV))) +
+#  geom_boxplot(fill = "#990000", col = "black") +
+#  ggtitle("Survival Status based on Time to Acute GvHD Stage III&IV") +
+#  xlab("Survival Status") +
+#  ylab("Time to Acute GvHD Stage III&IV") +
+#  theme_wsj()+ theme(axis.title=element_text(size=12),
+#                     plot.title = element_text(size = 10))
+```
+
+
+
+```{r}
+str(bone$PLT_recovery)
+str(bone$ANC_recovery)
+
+summary(bone$PLT_recovery)
+summary(bone$ANC_recovery)
+
+bone
+```
 
 
 ```{r}
@@ -234,11 +360,6 @@ prop.table(table(bone$survival_status))
 ```
 
 
-Practicing a commit here (lol ignore)
-```{r}
-head(bone)
-plot(bone$survival_status)
-```
 
 
 
