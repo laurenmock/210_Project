@@ -38,18 +38,31 @@ sort(colSums(bone == "?"), decreasing = TRUE) [1:10]
 
 
 # replace ?'s with true NA's
-bone <- mutate_all(bone, ~replace(., . == "?", NA))
+bone <- mutate_all(bone, ~replace(., . == "?", NA)) 
 
 # Now we can see all of the ?'s have been replaced with NA values that are picked up
-colSums(is.na(bone))
+sort(colSums(is.na(bone)), decreasing = TRUE) [1:10]
+```
+
+Well, it turns out there are some other psuedo "missing" values. Since some of this data is "time to event" data, there is the issue of too many days passing. To illustrate, let us see the number of occurrences the value 1000000. This value frequently occurs in the data amongst three variables. Since we are not experts, we will have to seek out some insights as to how this data is generally handles, since including values of 1000000 will significantly skew our data. 
+
+For now, we will, hesitatingly, leave these values in. 
+
+```{r}
+# let us see the number of ?'s that appear
+sort(colSums(bone == "1000000"), decreasing = TRUE) [1:3]
+
+# replace with NA
+# bone <- mutate_all(bone, ~replace(., . == "1000000", NA)) 
+
 ```
 
 
-#Dealing with missing values
+### Dealing with missing values
 
-Let's make sure our missing values do not exceed 5% of our total data
+Let's make sure our missing values do not exceed 5% of our total data.
 
-Here we see that we have a total of 3.3% of our data cells missing from our total data set, which is less than 5%! So we can continue
+Here we see that we have a total of 3.3% of our data cells missing from our total data set, which is less than 5%! So we can continue.
 ```{r}
 (81/(13*187)) * 100
 ```
@@ -59,15 +72,15 @@ Here we see that we have a total of 3.3% of our data cells missing from our tota
 Now, with those issues addressed, we can explore some more standard EDA. Lets familiarize ourselves with the data set by  briefly viewing all the columns, column types, a brief amount of data. We can then explore summary statistics. Note: we will have to change some of our data from character data to numeric data. 
 
 
-#Basic Data Exploration
+### Basic Data Exploration
 
-##Numerical Variables: 
+#### Numerical Variables: 
 donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time
 
-##Categorical Variables: 
+##### Categorical Variables: 
 donor_ABO, recipient_age_int, recipient_ABO, disease, CMV_status, HLA_match..out.of.10., antigen, allele, HLA_group_1 
 
-##Binary Variables:
+##### Binary Variables:
 donor_age_below_35 (yes/no), donor_CMV (present/absent), recipient_age_below_10 (yes/no), recipient_rh (plus/minus), recipient_CMV (present/absent), disease_group (malignant/nonmalignant), gender_match(female_to_male/other), ABO_match (matched/mismatched), HLA_mismatch (matched, mismatched), risk_group (high/low), stem_cell_source (peripheral_blood/bone_marrow),tx_post_relapse (yes/no), acute_GvHD_II_III_IV (yes/no), acute_GvHD_III_IV (yes/no), extensive_chronic_GvHD (yes/no), relapse (yes/no), survival_status (yes,no)
 
 Some summary statistics
@@ -100,12 +113,11 @@ bone %>%
             proportion = length(donor_CMV)/nrow(bone))
 
 # plot histogram of age distribution
-bone %>% 
-ggplot(aes(x = donor_age)) + 
-  geom_histogram(fill = "#990000", col = "black", binwidth = 5) + 
+ggplot(bone) + 
+  geom_histogram(aes(x = donor_age, y = ..density..), fill = "#990000", col = "black", binwidth = 1) + 
   ggtitle("Age of donors", ) +
   xlab("Age") +
-  ylab("Count") +
+  ylab("Density") +
   theme_wsj()+ theme(axis.title=element_text(size=12))
 
 ```
@@ -141,34 +153,37 @@ bone %>%
 
 # plot histogram of age distribution
 bone %>% 
-ggplot(aes(x = recipient_age)) + 
-  geom_histogram(fill = "#990000", col = "black", binwidth = 5) + 
-  ggtitle("Age of recipients", ) +
+ggplot() + 
+  geom_histogram(aes(x = recipient_age, y=..density..), fill = "#990000", col = "black", binwidth = 1) + 
+  ggtitle("Age of recipients" ) +
   xlab("Age") +
-  ylab("Count") +
+  ylab("Density") +
   theme_wsj()+ theme(axis.title=element_text(size=12))
 
 ```
 
 
-Now, let's take a look at recipient body mass, recipient rh factor (+ or -) and the risk group. Note: Changed data type of recipient body mass from character to numeric
+Now, let's take a look at recipient body mass, recipient rh factor (+ or -) and the risk group. 
+Note: Changed data type of recipient body mass from character to numeric
 
 
-(Assuming body mass has units of lbs)
+(Assuming weight has units of lbs)
 So far we can see the following:
 
-1) our recipients are have a body mass mostly between 15lbs to 60lbs (min body mass is 6 lbs and max body mass is 103.4 lbs)
+1) our recipients weighed between 15lbs to 60lbs (min weight is 6 lbs and max weight is 103.4 lbs)
 2) recipients' rh factor are as follows: plus (84.5%), minus (14.4%), NA (1.1%)
 3) risk status follows: high (36.9%), low (63.1%)
 
 ```{r}
 # plot histogram of body mass distribution
 bone %>% 
-ggplot(aes(x = as.numeric(recipient_body_mass))) + 
-  geom_histogram(fill = "#990000", col = "black", binwidth = 5) + 
-  ggtitle("Body mass of recipients", ) +
-  xlab("Body Mass") +
-  ylab("Count") +
+ggplot() + 
+  geom_histogram(aes(x = as.numeric(recipient_body_mass), y = ..density..),
+                 fill = "#990000", col = "black", binwidth = 5) + 
+  ggtitle("Weight of Recipients", ) +
+  scale_x_continuous(breaks = seq(0, 110, by =10)) +
+  xlab("Weight (lbs)") +
+  ylab("Density") +
   theme_wsj()+ theme(axis.title=element_text(size=12))
 
 
@@ -188,12 +203,12 @@ bone %>%
 
 
 
-
+### Scatterplots
 
 
 Looking only at the continous numerical variables next:
 
-We see at first glance based off of the correlation scatter plots that recipient age and body mass are very highly correlated
+We see at first glance based off of the correlation scatter plots that recipient age and body mass are very highly correlated (as we would expect).
 ```{r}
 bone_num <- bone %>% select(c(donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time))
 
@@ -349,8 +364,6 @@ str(bone$ANC_recovery)
 
 summary(bone$PLT_recovery)
 summary(bone$ANC_recovery)
-
-bone
 ```
 
 
@@ -360,7 +373,5 @@ prop.table(table(bone$survival_status))
 ```
 
 
-
-Do my commits work now? -daniel
 
 
