@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Group 4 Members:
 
-Danial Herrera  
+Daniel Herrera  
 Willow Duffell  
 Lauren Mock
 
@@ -54,7 +54,70 @@ Our primary outcome is survival status at the end of the follow-up period, which
 
 **Draft Statistical Analysis Plan**
 
-fill this in later...not sure the best way to include this (not worth fixing the whole bulleted list here)
+Draft Statistical Analysis Plan: 
+
+*I. Explain important variables (using "domain” knowledge)*
+
+  a. Identify potential confounders and effect measure modifiers (EMM) 
+
+  b. Will require an understanding of how our variables are associated 
+
+*II. Exploratory Data Analysis (EDA using above)* 
+
+  a. Visualizations (scatterplots - with jitter since survival 0-1, correlation matrices) 
+
+  b. Visualize confounding and EMM Summary statistics 
+
+*III. Candidate Variables* 
+
+  a .Choose best variables to use to predict survival 
+
+*IV. Model Selection*
+
+a. Primary Question 
+
+  Prediction of survival 
+
+   1) Goal is to predict survival at end of follow-up (binary variable) 
+
+   2) Does not need to account for confounding, because we only want the best possible prediction of survival 
+
+   3) Perform logistic regression (binary outcome) with all variables that may be important  
+        - Trim model - remove unnecessary variables to avoid unnecessary complexity/overfitting 
+        - Backwards removal using adjusted R^2 (since we are more concerned with maximizing our         predictive ability--the amount of variability in y explained by our covariates) 
+
+   4) Explore K-means as a non-parametric method of predicting survival 
+
+  Determining Risk Factors for Mortality (Association) 
+
+   1) Goal is to determine the most important risk factors in determining whether or not a patient survives 
+        - This will only include data that is collected before transplantation 
+
+   2) Must account for confounding, because we care about the strength of the relationship between each variable and survival 
+
+   3) Perform logistic regression with all variables that may be important 
+        - Trim model - remove unnecessary variables to avoid unnecessary complexity/overfitting
+        - Backwards removal using adjusted R^2 (since we are more concerned with maximizing our predictive ability--the amount of variability in y explained by our covariates) 
+
+b. Secondary Question--Source of hematopoietic stem cells 
+
+   1) Goal is to determine association between the two stem-cell source methods (peripheral blood and bone marrow) and their outcome of survival, presumably using the relevant covariates discovered in our model above 
+
+   2) Confounders will be important here, since we don’t yet know which type of patients receive which treatment 
+
+   3) Using Association model results from our primary question, add variable stem_cell_source and run an ANOVA test to determine which source has a better outcome of survival  
+
+*V. Check for multicollinearity using variance inflation factors* 
+
+a. We expect many of our variables to be highly correlated 
+
+*VI. Validate model using Cross-Validation, where appropriate*
+
+a. Samples of the training/testing data 
+
+b. How well would the prediction model perform on other data? 
+
+*VII. Run sensitivity analysis using Ridge, LASSO, or Elastic Net*
 
 ## Question 7
 
@@ -66,7 +129,7 @@ One of the main challenges we foresee in answering our proposed questions is our
 
 **Domain expertise sought**
 
-fill this in with more information!
+We will need to find a domain expert who has experience with hematologic diseases or bone marrow transplants in order to better understand our dataset and its variables. This will be especially important in identifying potential confounders, which cannot be identified through any statistical process alone. This will also give us some insight into possible effect measure modifiers. For now, we have discussed our dataset with Daniel’s fiancee, who is a doctor, and Willow’s mom, who is a nurse practitioner. Moving forward, we will be seeking additional expertise. 
 
 ## Question 9
 
@@ -116,9 +179,9 @@ bone <- mutate_all(bone, ~replace(., . == "?", NA))
 sort(colSums(is.na(bone)), decreasing = TRUE) [1:10]
 ```
 
-Well, it turns out there are some other psuedo "missing" values. Some time-to-event variables have entries of 1,000,000, which doesn't make sense in this context.
+Well, it turns out there are some other problematic values. Some time-to-event variables have entries of 1,000,000, which will be challenging to handle in our EDA.
 
-To illustrate, let us see the number of occurrences of the value 1000000. This value frequently occurs in the data amongst three variables. It seems as though these large values indicate that the event never occured for that subject, but we will need to confirm this. If our assumption is correct, then we will need to seek out advice on how to proceed. 
+To illustrate, let us see the number of occurrences of the value 1000000. This value frequently occurs in the data amongst three variables. It seems as though these large values indicate that the event never occurred for that subject, but we will need to confirm this. If our assumption is correct, then we will need to seek out advice on how to proceed. 
 
 For now, we will leave these values as is. We don't want to replace them with NA, because they do not appear to be missing values.
 
@@ -130,6 +193,7 @@ sort(colSums(bone == "1000000"), decreasing = TRUE) [1:3]
 # bone <- mutate_all(bone, ~replace(., . == "1000000", NA)) 
 
 ```
+
 Let's also make sure our true missing values do not exceed 5% of each column.
 
 ```{r}
@@ -144,7 +208,8 @@ missing_vals <- bone %>%
 missing_vals[missing_vals >= 5] %>% names()
 
 ```
-So only these three columns have > 5% missing values. We will need to investigate these missing values later if we choose to use these variables in our analysis.
+
+Only these three columns have > 5% missing values. We will need to investigate these missing values later if we choose to use these variables in our analysis.
 
 
 ### Basic Data Exploration
