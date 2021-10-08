@@ -40,19 +40,38 @@ Our primary goals are to predict (before transplantation) whether or not a patie
 
 ## Question 4
 
+**Secondary questions**
+
+There is a lot of controversy around the source of hematopoietic stem cells used in transplantation (either peripheral blood (PBSC) or bone marrow (BM)). It would be interesting to see if there is an association between these two stem-cell sources and the likelihood of survival, and we will definitely need to be careful with confounding when addressing this question.
+
 ## Question 5
+
+**Outcome(s)/endpoint(s)**
+
+Our primary outcome is survival status at the end of the follow-up period, which is a binary variable. We are interested in predicting a patient’s probability of survival, as well as understanding the relative importance of factors that influence survival. 
 
 ## Question 6
 
+**Draft Statistical Analysis Plan**
+
+fill this in later...not sure the best way to include this
+
 ## Question 7
+
+**Biggest challenges foreseen**
+
+One of the main challenges we foresee in answering our proposed questions is our lack of subject matter knowledge. In addressing which risk factors are most important in determining survival, we will need to have a comprehensive understanding of the potential confounders in our data set to ensure that the coefficients in our models are meaningful. In our secondary analysis, we will need to understand why a patient may be selected for a bone marrow transplant vs. a peripheral blood transplant, which will require a domain expert. We will also need to account for the many variable types included in our data, including numeric, categorical, and indicator.
 
 ## Question 8
 
+**Domain expertise sought**
+
+
 ## Question 9
 
+**What software package(s) will you use to complete this project?**
 
-
-
+We will all be using R.
 
 ## Question 10
 
