@@ -1,7 +1,7 @@
 ---
 title: "Week 5 lab BST 210"
 author: "Daniel Herrera, Willow Duffell, Lauren Mock"
-date: "9/30/2021"
+date: "10/9/2021"
 output: html_document
 ---
 
@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### **Group 4 Members:**
+#### Group 4 Members:
 
 Danial Herrera  
 Willow Duffell  
@@ -154,10 +154,10 @@ Now we can explore some more standard EDA. Lets familiarize ourselves with the d
 #### Numerical Variables: 
 donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time
 
-##### Categorical Variables: 
+#### Categorical Variables: 
 donor_ABO, recipient_age_int, recipient_ABO, disease, CMV_status, HLA_match..out.of.10., antigen, allele, HLA_group_1 
 
-##### Binary Variables:
+#### Binary Variables:
 donor_age_below_35 (yes/no), donor_CMV (present/absent), recipient_age_below_10 (yes/no), recipient_rh (plus/minus), recipient_CMV (present/absent), disease_group (malignant/nonmalignant), gender_match(female_to_male/other), ABO_match (matched/mismatched), HLA_mismatch (matched, mismatched), risk_group (high/low), stem_cell_source (peripheral_blood/bone_marrow),tx_post_relapse (yes/no), acute_GvHD_II_III_IV (yes/no), acute_GvHD_III_IV (yes/no), extensive_chronic_GvHD (yes/no), relapse (yes/no), survival_status (yes,no)
 
 ```{r}
@@ -306,11 +306,12 @@ cor(bone_num) %>% as.data.frame()
 
 
 
-### Exploratory analysis on outcome variable (survival_status)
+### Compare outcome variable (survival_status) and numeric variables
 
 1. Change survival to binary (instead of numeric)
 ```{r, warning=FALSE}
-bone$survival_status <- as.factor(bone$survival_status)
+
+bone$survival_status <- ifelse(bone$survival_status == 1, "Died", "Survived") %>% as.factor()
 
 bone %>% 
 ggplot(aes(x = survival_status)) + 
@@ -332,7 +333,7 @@ bone %>%
 
 donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time
 
-```{r}
+```{r, warning = FALSE}
 par(mfrow=c(3,3))
 
 bone %>% 
@@ -391,77 +392,19 @@ bone %>%
   scale_y_continuous(trans = "log") +
   ggtitle("Survival Status based on CD3+:CD34+ Ratio") +
   xlab("Survival Status") +
-  ylab("CD3+:CD34+ Ratio") +
+  ylab("CD3+:CD34+ Ratio (log scale)") +
   theme_wsj()+ theme(axis.title=element_text(size=12),
                      plot.title = element_text(size = 15))
 
-
-
-#Probably leaving these out (weird values) -------------------------------------------------
-
-#bone %>% 
-#  ggplot(aes(x = survival_status, y = as.numeric(ANC_recovery))) +
-#  geom_boxplot(fill = "#990000", col = "black") +
-#  scale_y_continuous(trans = "log") +
-#  ggtitle("Survival Status based on ANC recovery") +
-#  xlab("Survival Status") +
-#  ylab("ANC recovery") +
-#  theme_wsj()+ theme(axis.title=element_text(size=12),
-#                     plot.title = element_text(size = 20))
-
-
-#bone %>% 
-#  ggplot(aes(x = survival_status, y = as.numeric(PLT_recovery))) +
-#  geom_boxplot(fill = "#990000", col = "black") +
-#  scale_y_continuous(trans = "log") +
-#  ggtitle("Survival Status based on PLT recovery") +
-#  xlab("Survival Status") +
-#  ylab("PLT Recovery") +
-#  theme_wsj()+ theme(axis.title=element_text(size=12),
-#                     plot.title = element_text(size = 15))
-
-
-#bone %>% 
-#  ggplot(aes(x = survival_status, y = as.numeric(time_to_acute_GvHD_III_IV))) +
-#  geom_boxplot(fill = "#990000", col = "black") +
-#  ggtitle("Survival Status based on Time to Acute GvHD Stage III&IV") +
-#  xlab("Survival Status") +
-#  ylab("Time to Acute GvHD Stage III&IV") +
-#  theme_wsj()+ theme(axis.title=element_text(size=12),
-#                     plot.title = element_text(size = 10))
 ```
 
+### Now compare outcome variable (survival_status) and numeric variables
 
-
-Let's next look at the table of the outcome variable along with the proportions of survival
-```{r}
-table(bone$survival_status)
-prop.table(table(bone$survival_status)) 
-```
-
-Now that we looked at our outcome variable against continuous data, let's look at the relationships between the outcome varaible and categorical/binary data
-
-##Categorical Variables: 
+#### Categorical Variables: 
 donor_ABO, recipient_age_int, recipient_ABO, disease, CMV_status, HLA_match..out.of.10., antigen, allele, HLA_group_1 
 
-##Binary Variables:
+#### Binary Variables:
 donor_age_below_35 (yes/no), donor_CMV (present/absent), recipient_age_below_10 (yes/no), recipient_rh (plus/minus), recipient_CMV (present/absent), disease_group (malignant/nonmalignant), gender_match(female_to_male/other), ABO_match (matched/mismatched), HLA_mismatch (matched, mismatched), risk_group (high/low), stem_cell_source (peripheral_blood/bone_marrow),tx_post_relapse (yes/no), acute_GvHD_II_III_IV (yes/no), acute_GvHD_III_IV (yes/no), extensive_chronic_GvHD (yes/no), relapse (yes/no), survival_status (yes,no)
-
-
-
-Looking at survival status looking at variable with more than 2 categories:
-
-#donor_ABO - Seems that donor of blood type A gives the least likely chances of survival (but not by a considerable amount), but blood donors with type AB show drasticly better chances of survival
-#recipient_age_int - Recipient ages between 0-5 and increased chances of survival
-#recipient_ABO - Biggest difference of survival success is a recipient blood type of AB
-#disease - all disease categories show the same probability of survival except lukemia, which shows a 0% chance of survival
-#CMV_status - Shows serological compatibility of the donor and the recipient of hematopoietic stem cells according to cytomegalovirus infection prior to transplantation (the higher the value the lower the compatibility). Here we see that lower values like 0 and 1 show a higher chance of survival which is what we expect
-#HLA_match..out.of.10. - Compatibility of antigens of the main histocompatibility complex of the donor and the recipient of hematopoietic stem cells (10/10, 9/10, 8/10, 7/10) - a compatibility of 7/10 shows the least likely chances of survival
-#antigen - In how many antigens there is a difference between the donor and the recipient (0-3). An antigen difference of 3 increased the chances of death, while a difference of 2 had a better chance of survival than an antigen different of 1... interesting finding
-#allele -In how many allele there is a difference between the donor and the recipient (0-4). Pretty much the same chances of survival except when allele different was 4 then there was no chance of survival
-#HLA_group_1 - The difference type between the donor and the recipient (HLA matched, one antigen, one allel, DRB1 cell, two allele or allel+antigen, two antigenes+allel, mismatched). The DRB1_cell difference had an increased chance of death along with mismatched. Weird finding is that 3 differences increased survival drastically
-
-
 
 ```{r, fig.height=10, fig.width=10}
 
@@ -594,16 +537,204 @@ summary(bone$ANC_recovery)
 ```
 
 
+Looking at survival status looking at variable with more than 2 categories:
+
+donor_ABO - Seems that donor of blood type A gives the least likely chances of survival (but not by a considerable amount), but blood donors with type AB show drasticly better chances of survival
+recipient_age_int - Recipient ages between 0-5 and increased chances of survival
+recipient_ABO - Biggest difference of survival success is a recipient blood type of AB
+disease - all disease categories show the same probability of survival except lukemia, which shows a 0% chance of survival
+CMV_status - Shows serological compatibility of the donor and the recipient of hematopoietic stem cells according to cytomegalovirus infection prior to transplantation (the higher the value the lower the compatibility). Here we see that lower values like 0 and 1 show a higher chance of survival which is what we expect
+HLA_match..out.of.10. - Compatibility of antigens of the main histocompatibility complex of the donor and the recipient of hematopoietic stem cells (10/10, 9/10, 8/10, 7/10) - a compatibility of 7/10 shows the least likely chances of survival
+antigen - In how many antigens there is a difference between the donor and the recipient (0-3). An antigen difference of 3 increased the chances of death, while a difference of 2 had a better chance of survival than an antigen different of 1... interesting finding
+allele -In how many allele there is a difference between the donor and the recipient (0-4). Pretty much the same chances of survival except when allele different was 4 then there was no chance of survival
+HLA_group_1 - The difference type between the donor and the recipient (HLA matched, one antigen, one allele, DRB1 cell, two allele or allel+antigen, two antigenes+allel, mismatched). The DRB1_cell difference had an increased chance of death along with mismatched. Weird finding is that 3 differences increased survival drastically
+
+
+```{r, fig.height=10, fig.width=10}
+par(mfrow = c(4,4))
+
+#Donor Age Group
+#2x2 table with margins
+tab10 <- table(bone$survival_status,bone$donor_age_below_35)
+tab10 <- prop.table(tab10,2)
+addmargins(tab10)
+
+barplot(tab10,xlab='Donor Age Under 35', ylab='Survival = Yellow, Death = Red',
+main="Survival by Donor Age Range", col=c("yellow","#990000"),
+legend=rownames(tab10),args.legend=list(x="bottomleft"), beside=T)
+
+
+#Donor CMV
+#2x2 table with margins
+tab11 <- table(bone$survival_status,bone$donor_CMV)
+tab11 <- prop.table(tab11,2)
+addmargins(tab11)
+
+barplot(tab11,xlab='Donor CMV Status', ylab='Survival = Yellow, Death = Red',
+main="Survival by Donor CMV Status", col=c("yellow","#990000"),
+legend=rownames(tab11),args.legend=list(x="bottomleft"), beside=T)
+
+
+#recipient_age_below_10
+#2x2 table with margins
+tab12 <- table(bone$survival_status,bone$recipient_age_below_10)
+tab12 <- prop.table(tab12,2)
+addmargins(tab12)
+
+barplot(tab12,xlab='Recipient Age Below 10', ylab='Survival = Yellow, Death = Red',
+main="Survival by Recipient Age Range", col=c("yellow","#990000"),
+legend=rownames(tab12),args.legend=list(x="bottomleft"), beside=T)
+
+#recipient_rh
+#2x2 table with margins
+tab13 <- table(bone$survival_status,bone$recipient_rh)
+tab13 <- prop.table(tab13,2)
+addmargins(tab13)
+
+barplot(tab13,xlab='Recipient Rh Presence', ylab='Survival = Yellow, Death = Red',
+main="Survival by Recipient rh Presence", col=c("yellow","#990000"),
+legend=rownames(tab13),args.legend=list(x="bottomleft"), beside=T)
+
+
+#recipient_CMV
+#2x2 table with margins
+tab14 <- table(bone$survival_status,bone$recipient_CMV)
+tab14 <- prop.table(tab14,2)
+addmargins(tab14)
+
+barplot(tab14,xlab='Recipient CMV Presence', ylab='Survival = Yellow, Death = Red',
+main="Survival by Recipient CMV Presence", col=c("yellow","#990000"),
+legend=rownames(tab14),args.legend=list(x="bottomleft"), beside=T)
+
+
+#disease_group
+#2x2 table with margins
+tab15 <- table(bone$survival_status,bone$disease_group)
+tab15 <- prop.table(tab15,2)
+addmargins(tab15)
+
+barplot(tab15,xlab='Disease Group', ylab='Survival = Yellow, Death = Red',
+main="Survival by Disease Group", col=c("yellow","#990000"),
+legend=rownames(tab15),args.legend=list(x="bottomleft"), beside=T)
+
+
+#gender_match ***------------------- don't understand this variable
+#2x2 table with margins
+tab16 <- table(bone$survival_status,bone$gender_match)
+tab16 <- prop.table(tab16,2)
+addmargins(tab16)
+
+barplot(tab16,xlab='Gender Match', ylab='Survival = Yellow, Death = Red',
+main="Survival by Gender Match?", col=c("yellow","#990000"),
+legend=rownames(tab16),args.legend=list(x="bottomleft"), beside=T)
+
+
+#ABO_match
+#2x2 table with margins
+tab17 <- table(bone$survival_status,bone$ABO_match)
+tab17 <- prop.table(tab17,2)
+addmargins(tab17)
+
+barplot(tab17,xlab='Match based on Blood Group', ylab='Survival = Yellow, Death = Red',
+main="Survival by Match of Blood Group", col=c("yellow","#990000"),
+legend=rownames(tab17),args.legend=list(x="bottomleft"), beside=T)
+
+
+
+#HLA_match
+#2x2 table with margins
+tab18 <- table(bone$survival_status,bone$HLA_mismatch)
+tab18 <- prop.table(tab18,2)
+addmargins(tab18)
+
+barplot(tab18,xlab='Match based on HLA', ylab='Survival = Yellow, Death = Red',
+main="Survival by Match of HLA", col=c("yellow","#990000"),
+legend=rownames(tab18),args.legend=list(x="bottomleft"), beside=T)
+
+
+
+#risk_group
+#2x2 table with margins
+tab19 <- table(bone$survival_status,bone$risk_group)
+tab19 <- prop.table(tab19,2)
+addmargins(tab19)
+
+barplot(tab19,xlab='Risk Group', ylab='Survival = Yellow, Death = Red',
+main="Survival by Risk Group", col=c("yellow","#990000"),
+legend=rownames(tab19),args.legend=list(x="bottomleft"), beside=T)
+
+
+#stem_cell_source
+#2x2 table with margins
+tab20 <- table(bone$survival_status,bone$stem_cell_source)
+tab20 <- prop.table(tab20,2)
+addmargins(tab20)
+
+barplot(tab20,xlab='Stem Cell Source', ylab='Survival = Yellow, Death = Red',
+main="Survival by Stem Cell Source", col=c("yellow","#990000"),
+legend=rownames(tab20),args.legend=list(x="bottomleft"), beside=T)
+
+
+
+#tx_post_relapse
+#2x2 table with margins
+tab21 <- table(bone$survival_status,bone$tx_post_relapse)
+tab21 <- prop.table(tab21,2)
+addmargins(tab21)
+
+barplot(tab21,xlab='Relapse After Treatment', ylab='Survival = Yellow, Death = Red',
+main="Survival by Relapse after Treatment", col=c("yellow","#990000"),
+legend=rownames(tab21),args.legend=list(x="bottomleft"), beside=T)
+
+
+
+#acute_GvHD_II_III_IV
+#2x2 table with margins
+tab22 <- table(bone$survival_status,bone$acute_GvHD_II_III_IV)
+tab22 <- prop.table(tab22,2)
+addmargins(tab22)
+
+barplot(tab22,xlab='Development of Acute GVHD stage II, III or IV ', ylab='Survival = Yellow, Death = Red',
+main="Survival by Development of Acute GVHD (Stage II, III or IV)", col=c("yellow","#990000"),
+legend=rownames(tab22),args.legend=list(x="bottomleft"), beside=T)
+
+
+
+#acute_GvHD_III_IV
+#2x2 table with margins
+tab23 <- table(bone$survival_status,bone$acute_GvHD_III_IV)
+tab23 <- prop.table(tab22,2)
+addmargins(tab23)
+
+barplot(tab23,xlab='Development of Acute GVHD stage III or IV ', ylab='Survival = Yellow, Death = Red',
+main="Survival by Development of Acute GVHD (Stage III or IV)", col=c("yellow","#990000"),
+legend=rownames(tab23),args.legend=list(x="bottomleft"), beside=T)
+
+
+
+#extensive_chronic_GvHD
+#2x2 table with margins
+tab24 <- table(bone$survival_status,bone$extensive_chronic_GvHD)
+tab24 <- prop.table(tab24,2)
+addmargins(tab24)
+
+barplot(tab24,xlab='Development of Chronic Acute GVHD', ylab='Survival = Yellow, Death = Red',
+main="Survival by Development of Chronic Acute GVHD", col=c("yellow","#990000"),
+legend=rownames(tab24),args.legend=list(x="bottomleft"), beside=T)
+
+
+
+#relapse
+#2x2 table with margins
+tab25 <- table(bone$survival_status,bone$relapse)
+tab25 <- prop.table(tab25,2)
+addmargins(tab25)
+
+barplot(tab25,xlab='Relapse', ylab='Survival = Yellow, Death = Red',
+main="Survival by Relapse", col=c("yellow","#990000"),
+legend=rownames(tab25),args.legend=list(x="bottomleft"), beside=T)
+
 ```
-
-
-
-
-<<<<<<< HEAD
-
-
-
-#Binary Variables
 
 Looking at survival status with binary variables
 
@@ -623,190 +754,3 @@ acute_GvHD_II_III_IV (yes/no) - not a huge difference in survival chances if acu
 acute_GvHD_III_IV (yes/no) - same for this variable
 extensive_chronic_GvHD (yes/no) - development of chronic acute GVHD increases chances of death drastically
 relapse (yes/no) - as we figured, occurence of relapse decrease survival chances drastically
-
-```{r, fig.height=10, fig.width=10}
-par(mfrow = c(4,4))
-
-#Donor Age Group
-#2x2 table with margins
-tab10 <- table(bone$survival_status,bone$donor_age_below_35)
-tab10 <- prop.table(tab10,2)
-addmargins(tab10)
-
-barplot(tab10,xlab='Donor Age Under 35', ylab='Survival = Yellow, Death = Red',
-main="Survival by Donor Age Range", col=c("yellow","#990000"),
-legend=rownames(tab10),args.legend=list(x="topleft"), beside=T)
-
-
-#Donor CMV
-#2x2 table with margins
-tab11 <- table(bone$survival_status,bone$donor_CMV)
-tab11 <- prop.table(tab11,2)
-addmargins(tab11)
-
-barplot(tab11,xlab='Donor CMV Status', ylab='Survival = Yellow, Death = Red',
-main="Survival by Donor CMV Status", col=c("yellow","#990000"),
-legend=rownames(tab11),args.legend=list(x="topleft"), beside=T)
-
-
-#recipient_age_below_10
-#2x2 table with margins
-tab12 <- table(bone$survival_status,bone$recipient_age_below_10)
-tab12 <- prop.table(tab12,2)
-addmargins(tab12)
-
-barplot(tab12,xlab='Recipient Age Below 10', ylab='Survival = Yellow, Death = Red',
-main="Survival by Recipient Age Range", col=c("yellow","#990000"),
-legend=rownames(tab12),args.legend=list(x="topleft"), beside=T)
-
-#recipient_rh
-#2x2 table with margins
-tab13 <- table(bone$survival_status,bone$recipient_rh)
-tab13 <- prop.table(tab13,2)
-addmargins(tab13)
-
-barplot(tab13,xlab='Recipient Rh Presence', ylab='Survival = Yellow, Death = Red',
-main="Survival by Recipient rh Presence", col=c("yellow","#990000"),
-legend=rownames(tab13),args.legend=list(x="topleft"), beside=T)
-
-
-#recipient_CMV
-#2x2 table with margins
-tab14 <- table(bone$survival_status,bone$recipient_CMV)
-tab14 <- prop.table(tab14,2)
-addmargins(tab14)
-
-barplot(tab14,xlab='Recipient CMV Presence', ylab='Survival = Yellow, Death = Red',
-main="Survival by Recipient CMV Presence", col=c("yellow","#990000"),
-legend=rownames(tab14),args.legend=list(x="topleft"), beside=T)
-
-
-#disease_group
-#2x2 table with margins
-tab15 <- table(bone$survival_status,bone$disease_group)
-tab15 <- prop.table(tab15,2)
-addmargins(tab15)
-
-barplot(tab15,xlab='Disease Group', ylab='Survival = Yellow, Death = Red',
-main="Survival by Disease Group", col=c("yellow","#990000"),
-legend=rownames(tab15),args.legend=list(x="topleft"), beside=T)
-
-
-#gender_match ***------------------- don't understand this variable
-#2x2 table with margins
-tab16 <- table(bone$survival_status,bone$gender_match)
-tab16 <- prop.table(tab16,2)
-addmargins(tab16)
-
-barplot(tab16,xlab='Gender Match', ylab='Survival = Yellow, Death = Red',
-main="Survival by Gender Match?", col=c("yellow","#990000"),
-legend=rownames(tab16),args.legend=list(x="topleft"), beside=T)
-
-
-#ABO_match
-#2x2 table with margins
-tab17 <- table(bone$survival_status,bone$ABO_match)
-tab17 <- prop.table(tab17,2)
-addmargins(tab17)
-
-barplot(tab17,xlab='Match based on Blood Group', ylab='Survival = Yellow, Death = Red',
-main="Survival by Match of Blood Group", col=c("yellow","#990000"),
-legend=rownames(tab17),args.legend=list(x="topleft"), beside=T)
-
-
-
-#HLA_match
-#2x2 table with margins
-tab18 <- table(bone$survival_status,bone$HLA_mismatch)
-tab18 <- prop.table(tab18,2)
-addmargins(tab18)
-
-barplot(tab18,xlab='Match based on HLA', ylab='Survival = Yellow, Death = Red',
-main="Survival by Match of HLA", col=c("yellow","#990000"),
-legend=rownames(tab18),args.legend=list(x="topleft"), beside=T)
-
-
-
-#risk_group
-#2x2 table with margins
-tab19 <- table(bone$survival_status,bone$risk_group)
-tab19 <- prop.table(tab19,2)
-addmargins(tab19)
-
-barplot(tab19,xlab='Risk Group', ylab='Survival = Yellow, Death = Red',
-main="Survival by Risk Group", col=c("yellow","#990000"),
-legend=rownames(tab19),args.legend=list(x="topleft"), beside=T)
-
-
-#stem_cell_source
-#2x2 table with margins
-tab20 <- table(bone$survival_status,bone$stem_cell_source)
-tab20 <- prop.table(tab20,2)
-addmargins(tab20)
-
-barplot(tab20,xlab='Stem Cell Source', ylab='Survival = Yellow, Death = Red',
-main="Survival by Stem Cell Source", col=c("yellow","#990000"),
-legend=rownames(tab20),args.legend=list(x="topleft"), beside=T)
-
-
-
-#tx_post_relapse
-#2x2 table with margins
-tab21 <- table(bone$survival_status,bone$tx_post_relapse)
-tab21 <- prop.table(tab21,2)
-addmargins(tab21)
-
-barplot(tab21,xlab='Relapse After Treatment', ylab='Survival = Yellow, Death = Red',
-main="Survival by Relapse after Treatment", col=c("yellow","#990000"),
-legend=rownames(tab21),args.legend=list(x="topleft"), beside=T)
-
-
-
-#acute_GvHD_II_III_IV
-#2x2 table with margins
-tab22 <- table(bone$survival_status,bone$acute_GvHD_II_III_IV)
-tab22 <- prop.table(tab22,2)
-addmargins(tab22)
-
-barplot(tab22,xlab='Development of Acute GVHD stage II, III or IV ', ylab='Survival = Yellow, Death = Red',
-main="Survival by Development of Acute GVHD (Stage II, III or IV)", col=c("yellow","#990000"),
-legend=rownames(tab22),args.legend=list(x="topleft"), beside=T)
-
-
-
-#acute_GvHD_III_IV
-#2x2 table with margins
-tab23 <- table(bone$survival_status,bone$acute_GvHD_III_IV)
-tab23 <- prop.table(tab22,2)
-addmargins(tab23)
-
-barplot(tab23,xlab='Development of Acute GVHD stage III or IV ', ylab='Survival = Yellow, Death = Red',
-main="Survival by Development of Acute GVHD (Stage III or IV)", col=c("yellow","#990000"),
-legend=rownames(tab23),args.legend=list(x="topleft"), beside=T)
-
-
-
-#extensive_chronic_GvHD
-#2x2 table with margins
-tab24 <- table(bone$survival_status,bone$extensive_chronic_GvHD)
-tab24 <- prop.table(tab24,2)
-addmargins(tab24)
-
-barplot(tab24,xlab='Development of Chronic Acute GVHD', ylab='Survival = Yellow, Death = Red',
-main="Survival by Development of Chronic Acute GVHD", col=c("yellow","#990000"),
-legend=rownames(tab24),args.legend=list(x="topleft"), beside=T)
-
-
-
-#relapse
-#2x2 table with margins
-tab25 <- table(bone$survival_status,bone$relapse)
-tab25 <- prop.table(tab25,2)
-addmargins(tab25)
-
-barplot(tab25,xlab='Relapse', ylab='Survival = Yellow, Death = Red',
-main="Survival by Relapse", col=c("yellow","#990000"),
-legend=rownames(tab25),args.legend=list(x="topleft"), beside=T)
-
-```
-
