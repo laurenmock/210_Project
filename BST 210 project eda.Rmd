@@ -2,8 +2,55 @@
 title: "Week 5 lab BST 210"
 author: "Daniel Herrera, Willow Duffell, Lauren Mock"
 date: "9/30/2021"
-output: html_document
+output: pdf_document
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Group 4 Members:**
+
+Danial Herrera  
+Willow Duffell  
+Lauren Mock
+
+## Question 1
+
+**General area/domain/subject area**
+
+The general subject area of this project is bone marrow transplant outcomes in children with hematologic diseases. 
+
+## Question 2
+
+**Dataset and source**
+
+We will use data obtained from the UCI Machine Learning Repository: Center for Machine Learning and Intelligent Systems that was originally collected by researchers in the Faculty of Automatic Control, Electronics and Computer Science at Silesian University of Technology in Poland. This data set includes children with hematologic diseases, such as leukemia, who underwent bone marrow transplants. It includes information on the donor, the recipient, and the recipient’s response to the treatment. 
+
+The source of this data set can be found here: 
+(https://archive.ics.uci.edu/ml/datasets/Bone+marrow+transplant%3A+children).
+
+And a downloadable version of the data set can be found here: (https://www.kaggle.com/adamgudys/bone-marrow-transplant-children).
+
+### Question 3
+
+
+
+### Question 4
+
+### Question 5
+
+### Question 6
+
+### Question 7
+
+### Question 8
+
+### Question 9
+
+
+
+
 
 ### Question 10
 
