@@ -234,6 +234,12 @@ prop.table(table(bone$survival_status))
 ```
 
 
+Practicing a commit here (lol ignore)
+```{r}
+head(bone)
+plot(bone$survival_status)
+```
+
 
 
 
