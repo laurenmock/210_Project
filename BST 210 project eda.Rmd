@@ -487,16 +487,15 @@ tab1 <- table(bone$survival_status,bone$donor_ABO)
 tab1 <-prop.table(tab1,2)
 addmargins(tab1) %>% pander(caption = "Donor Blood Type")
 
-barplot(tab1,
-        xlab='Donor Blood Type', 
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by Donor Blood Type",
-        col=c("#990000","yellow"),
-        cex.main = 1,
-        legend=rownames(tab1),
-        args.legend=list(x="topleft"), beside=T)
+tab1 <- tab1 %>% as.data.frame()
 
-
+p1 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab1) +
+  geom_col(position = "dodge") +
+  xlab("Donor Blood Type") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
 
 #Recipient age
 bone$recipient_age_int <- factor(bone$recipient_age_int , levels=c("0_5", "5_10", "10_20"))
@@ -505,16 +504,15 @@ tab2 <- table(bone$survival_status,bone$recipient_age_int)
 tab2 <-prop.table(tab2,2)
 addmargins(tab2) %>% pander(caption = "Recipient Age")
 
-barplot(tab2,
-        xlab='Recipient Age Range',
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by Recipient Age Range",
-        cex.main = 1,
-        col=c("#990000","yellow"),
-        legend=rownames(tab2),
-        args.legend=list(x="topleft"), beside=T)
+tab2 <- tab2 %>% as.data.frame()
 
-
+p2 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab2) +
+  geom_col(position = "dodge") +
+  xlab("Recipient Age Range") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
 
 #recipient_ABO
 #2x2 table with margins
@@ -522,15 +520,15 @@ tab3 <- table(bone$survival_status,bone$recipient_ABO)
 tab3 <-prop.table(tab3,2)
 addmargins(tab3) %>% pander(caption = "Recipient Blood Type")
 
-barplot(tab3,
-        xlab='Recipient Blood Type', 
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by Recipient Blood Type",
-        col=c("#990000","yellow"),
-        cex.main = 1,
-        legend=rownames(tab3),
-        args.legend=list(x="topleft"), beside=T)
+tab3 <- tab3 %>% as.data.frame()
 
+p3 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab3) +
+  geom_col(position = "dodge") +
+  xlab("Recipient Blood Type") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
 
 
 #Disease
@@ -540,16 +538,15 @@ tab4 <- table(bone$survival_status,bone$disease)
 tab4 <-prop.table(tab4,2)
 addmargins(tab4) %>% pander(caption = "Disease")
 
+tab4 <- tab4 %>% as.data.frame()
 
-barplot(tab4,
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by Recipient Disease",
-        cex.main = 1,
-        las = 2,
-        col=c("#990000","yellow"),
-        legend=rownames(tab4),args.legend=list(x="topleft"), beside=T)
-
-
+p4 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab4) +
+  geom_col(position = "dodge") +
+  xlab("Disease Type") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
 
 #CMV_status
 
@@ -559,15 +556,15 @@ tab5 <- table(bone$survival_status,bone$CMV_status)
 tab5 <-prop.table(tab5,2)
 addmargins(tab5) %>% pander(caption = "CMV Status")
 
-barplot(tab5,
-        xlab='CMV Status', 
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by Serological Compatibility",
-        cex.main = 1,
-        col=c("#990000","yellow"),
-        legend=rownames(tab5),
-        args.legend=list(x="topleft"), beside=T)
+tab5 <- tab5 %>% as.data.frame()
 
+p5 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab5) +
+  geom_col(position = "dodge") +
+  xlab("CMV Status") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
 
 
 #HLA Match
@@ -578,16 +575,15 @@ tab6 <- table(bone$survival_status,bone$HLA_match..out.of.10.)
 tab6 <-prop.table(tab6,2)
 addmargins(tab6) %>% pander(caption = "HLA Match out of 10")
 
-barplot(tab6,
-        xlab='HLA Match (out of 10)', 
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by HLA Match", 
-        col=c("#990000","yellow"),
-        cex.main = 1,
-        legend=rownames(tab6),
-        args.legend=list(x="topleft"), beside=T)
+tab6 <- tab6 %>% as.data.frame()
 
-
+p6 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab6) +
+  geom_col(position = "dodge") +
+  xlab("HLA Match (out of 10)") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
 
 
 #antigen
@@ -598,16 +594,15 @@ tab7 <- table(bone$survival_status,bone$antigen)
 tab7 <- prop.table(tab7,2)
 addmargins(tab7)  %>% pander(caption = "Antigen")
 
-barplot(tab7,
-        xlab='Antigen Difference', 
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by Antigen Difference", 
-        cex.main = 1,
-        col=c("#990000","yellow"),
-        legend=rownames(tab7),
-        args.legend=list(x="topleft"), beside=T)
+tab7 <- tab7 %>% as.data.frame()
 
-
+p7 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab7) +
+  geom_col(position = "dodge") +
+  xlab("Antigen Difference") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
 
 #allele
 #2x2 table with margins
@@ -616,15 +611,15 @@ tab8 <- table(bone$survival_status,bone$allele)
 tab8 <- prop.table(tab8,2)
 addmargins(tab8)  %>% pander(caption = "Allele")
 
+tab8 <- tab8 %>% as.data.frame()
 
-barplot(tab8,
-        xlab='Allele Difference', 
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by Allele Difference",
-        cex.main = 1,
-        col=c("#990000","yellow"),
-        legend=rownames(tab8),args.legend=list(x="topleft"), beside=T)
-
+p8 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab8) +
+  geom_col(position = "dodge") +
+  xlab("Allele Difference") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
 
 #HLA_group_1
 
@@ -638,15 +633,18 @@ addmargins(tab9)  %>% pander(caption = "HLA Group 1")
 # Increase margin size
 par(mar=c(8,1,1,1))
 
-barplot(tab9,
-        ylab='Survival = Yellow, Death = Red',
-        main="Survival by Difference Type", 
-        cex.main = 1,
-        cex.axis = 0.1,
-        las = 2,
-        col=c("#990000","yellow"),
-        legend=rownames(tab9),
-        args.legend=list(x="topleft"), beside=T)
+tab9 <- tab9 %>% as.data.frame()
+
+p9 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab9) +
+  geom_col(position = "dodge") +
+  xlab("Allele Difference") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2")) +
+  theme(legend.position="top")
+
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9, 
+             nrow = 3, ncol = 3)
 
 ```
 
@@ -824,7 +822,7 @@ tab17 <- tab17 %>% data.frame()
 
 p17 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab17) + 
   geom_col(position = "dodge") +
-  xlab("MAtch on Blood Group") +
+  xlab("Match on Blood Group") +
   ylab ("Density (%)") +
   labs(fill='status') +
   scale_fill_manual(values=c("#990000", "burlywood2"))+
@@ -977,7 +975,7 @@ p25 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab25) +
   scale_fill_manual(values=c("#990000", "burlywood2"))+
   theme(legend.position="top")
 
-grid.arrange(p10,p11,p12,p12,p14,p15,p16,p17,p18,p19,p20,p21,p22,p23,p24,p25, 
+grid.arrange(p10,p11,p12,p13,p14,p15,p16,p17,p18,p19,p20,p21,p22,p23,p24,p25, 
              nrow = 4, ncol = 4)
 
 ```
