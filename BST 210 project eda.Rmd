@@ -158,7 +158,7 @@ bone <- read.csv("data.csv")
 
 ### Explore Missing Values
 
-Before we begin with any visualizations and summary statistics, I would like to explore  missing-ness within our data set. 
+Before we begin with any visualizations and summary statistics, we would like to explore  missing-ness within our data set. 
 
 ```{r}
 
@@ -215,7 +215,7 @@ Only these three columns have > 5% missing values. We will need to investigate t
 
 ### Basic Data Exploration
 
-Now we can explore some more standard EDA. Lets familiarize ourselves with the data set by briefly viewing all the columns, column types, a brief amount of data. We can then explore summary statistics. Note: we will have to change some of our data from character data to numeric data. 
+Now we can explore some more standard EDA. Let's familiarize ourselves with the data set by briefly viewing all the columns, column types, a brief amount of data. We can then explore summary statistics. Note: we will have to change some of our data from character data to numeric data. 
 
 #### Numerical Variables: 
 donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time
@@ -262,7 +262,7 @@ So far we can see the following:
 
 1) Most of our donors are between 20 and 50 years old
 2) Donors' blood types are as follows: type O (39.0%), type A (38.0%), type AB (8.0%), B (15.0%)
-3) Donors' cmv status follows: absent (60.4%), present (38.5%), missing (0.1%)
+3) Donors' cytomegalovirus status follows: absent (60.4%), present (38.5%), missing (0.1%)
 
 
 
@@ -299,11 +299,11 @@ So far we can see the following:
 
 1) Our recipients are mostly between 5 and 15 years old (min age is 0.6 years old and max age is 20 years old)
 2) Recipients' blood types are as follows: type O (25.7%), type A (40.1%), type AB (7.0%), B (26.7%), NA (0.5%)
-3) Recipients' cmv status follows: absent (39.0%), present (53.5%), missing (7.5%)
+3) Recipients' cytomegalovirus status follows: absent (39.0%), present (53.5%), missing (7.5%)
 
 
 
-Now we can try to have a look at recipients' weight, rh factor (+ or -), and risk group
+Now we can try to have a look at recipients' weight, rh factor (+ or -), and risk group.
 
 Note: Changed data type of recipient body mass from character to numeric
 (Assuming weight has units of lbs)
@@ -336,7 +336,7 @@ bone %>%
 So far we can see the following about our recipients:
 
 1) Our recipients weighed between 15lbs to 60lbs (min weight is 6 lbs and max weight is 103.4 lbs)
-2) Recipients' rh factor are as follows: plus (84.5%), minus (14.4%), NA (1.1%)
+2) Recipients' rh factor (rhesus) are as follows: plus (84.5%), minus (14.4%), NA (1.1%)
 3) Risk status follows: high (36.9%), low (63.1%)
 
 
@@ -357,7 +357,7 @@ pairs(bone_num)
 We see at first glance based off of the correlation scatter plots that recipient age and body mass are very highly correlated (as we would expect). We also see many plots with binary variables, and several plots with points that are very far from the main cloud of data.
 
 
-We can also use a correlation matrix to see the relationships between our variables, where applicable. The data is quite large with many binary variables, so perhaps our visualizations will aid us more. 
+We can also use a correlation matrix to see the relationships between our variables, where applicable. The data is quite large with many binary variables, so perhaps our visualizations will aid us more effectively. 
 
 ```{r}
 # correlation matrix
@@ -393,6 +393,8 @@ bone %>%
 
 
 2. Look at binary outcome with continuous predictors
+
+Now let's view our outcome variable, survival status, with our continuous predictor variables (listed below). We should pay close attention to any notable changes in distributions between those who survived compared to those who did not. 
 
 donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time
 
@@ -483,7 +485,7 @@ par(mfrow=c(3,3))
 #2x2 table with margins
 tab1 <- table(bone$survival_status,bone$donor_ABO)
 tab1 <-prop.table(tab1,2)
-addmargins(tab1)
+addmargins(tab1) %>% pander(caption = "Donor Blood Type")
 
 barplot(tab1,
         xlab='Donor Blood Type', 
@@ -501,7 +503,7 @@ bone$recipient_age_int <- factor(bone$recipient_age_int , levels=c("0_5", "5_10"
 #2x2 table with margins
 tab2 <- table(bone$survival_status,bone$recipient_age_int)
 tab2 <-prop.table(tab2,2)
-addmargins(tab2)
+addmargins(tab2) %>% pander(caption = "Recipient Age")
 
 barplot(tab2,
         xlab='Recipient Age Range',
@@ -518,7 +520,7 @@ barplot(tab2,
 #2x2 table with margins
 tab3 <- table(bone$survival_status,bone$recipient_ABO)
 tab3 <-prop.table(tab3,2)
-addmargins(tab3)
+addmargins(tab3) %>% pander(caption = "Recipient Blood Type")
 
 barplot(tab3,
         xlab='Recipient Blood Type', 
@@ -536,7 +538,7 @@ barplot(tab3,
 # disease by survival
 tab4 <- table(bone$survival_status,bone$disease)
 tab4 <-prop.table(tab4,2)
-addmargins(tab4)
+addmargins(tab4) %>% pander(caption = "Disease")
 
 
 barplot(tab4,
@@ -555,7 +557,7 @@ barplot(tab4,
 # CMV status by survival
 tab5 <- table(bone$survival_status,bone$CMV_status)
 tab5 <-prop.table(tab5,2)
-addmargins(tab5)
+addmargins(tab5) %>% pander(caption = "CMV Status")
 
 barplot(tab5,
         xlab='CMV Status', 
@@ -571,10 +573,10 @@ barplot(tab5,
 #HLA Match
 
 #2x2 table with margins
-# CMV status by survival
+# HLA by survival
 tab6 <- table(bone$survival_status,bone$HLA_match..out.of.10.)
 tab6 <-prop.table(tab6,2)
-addmargins(tab6)
+addmargins(tab6) %>% pander(caption = "HLA Match out of 10")
 
 barplot(tab6,
         xlab='HLA Match (out of 10)', 
@@ -591,10 +593,10 @@ barplot(tab6,
 #antigen
 
 #2x2 table with margins
-# CMV status by survival
+# Antigen by survival
 tab7 <- table(bone$survival_status,bone$antigen)
 tab7 <- prop.table(tab7,2)
-addmargins(tab7)
+addmargins(tab7)  %>% pander(caption = "Antigen")
 
 barplot(tab7,
         xlab='Antigen Difference', 
@@ -609,10 +611,10 @@ barplot(tab7,
 
 #allele
 #2x2 table with margins
-# CMV status by survival
+# Allele by survival
 tab8 <- table(bone$survival_status,bone$allele)
 tab8 <- prop.table(tab8,2)
-addmargins(tab8)
+addmargins(tab8)  %>% pander(caption = "Allele")
 
 
 barplot(tab8,
@@ -628,10 +630,10 @@ barplot(tab8,
 #HLA_group_1
 
 #2x2 table with margins
-# CMV status by survival
+# HLA gorup 1 by survival
 tab9 <- table(bone$survival_status,bone$HLA_group_1)
 tab9 <- prop.table(tab9,2)
-addmargins(tab9)
+addmargins(tab9)  %>% pander(caption = "HLA Group 1")
 
 
 # Increase margin size
@@ -688,7 +690,7 @@ par(mfrow = c(4,4))
 #2x2 table with margins
 tab10 <- table(bone$survival_status,bone$donor_age_below_35)
 tab10 <- prop.table(tab10,2)
-addmargins(tab10)
+addmargins(tab10) %>% pander(caption = "Donor Age below 35")
 
 barplot(tab10,
         xlab='Donor Age Under 35', 
@@ -704,7 +706,7 @@ barplot(tab10,
 #2x2 table with margins
 tab11 <- table(bone$survival_status,bone$donor_CMV)
 tab11 <- prop.table(tab11,2)
-addmargins(tab11)
+addmargins(tab11)  %>% pander(caption = "Donor CMV")
 
 barplot(tab11,
         xlab='Donor CMV Status',
@@ -720,7 +722,7 @@ barplot(tab11,
 #2x2 table with margins
 tab12 <- table(bone$survival_status,bone$recipient_age_below_10)
 tab12 <- prop.table(tab12,2)
-addmargins(tab12)
+addmargins(tab12)  %>% pander(caption = "Recipient Age Below 10 yrs old")
 
 barplot(tab12,
         xlab='Recipient Age Below 10',
@@ -735,7 +737,7 @@ barplot(tab12,
 #2x2 table with margins
 tab13 <- table(bone$survival_status,bone$recipient_rh)
 tab13 <- prop.table(tab13,2)
-addmargins(tab13)
+addmargins(tab13)  %>% pander(caption = "Recipient RH Status")
 
 barplot(tab13,
         xlab='Recipient Rh Presence',
@@ -751,7 +753,7 @@ barplot(tab13,
 #2x2 table with margins
 tab14 <- table(bone$survival_status,bone$recipient_CMV)
 tab14 <- prop.table(tab14,2)
-addmargins(tab14)
+addmargins(tab14) %>% pander(caption = "Recipient CMV Stautus")
 
 barplot(tab14,
         xlab='Recipient CMV Presence', 
@@ -767,7 +769,7 @@ barplot(tab14,
 #2x2 table with margins
 tab15 <- table(bone$survival_status,bone$disease_group)
 tab15 <- prop.table(tab15,2)
-addmargins(tab15)
+addmargins(tab15)  %>% pander(caption = "Disease Group")
 
 barplot(tab15,
         xlab='Disease Group', 
@@ -783,7 +785,7 @@ barplot(tab15,
 #2x2 table with margins
 tab16 <- table(bone$survival_status,bone$gender_match)
 tab16 <- prop.table(tab16,2)
-addmargins(tab16)
+addmargins(tab16)  %>% pander(caption = "Gender Match")
 
 barplot(tab16,
         xlab='Gender Match', 
@@ -799,7 +801,7 @@ barplot(tab16,
 #2x2 table with margins
 tab17 <- table(bone$survival_status,bone$ABO_match)
 tab17 <- prop.table(tab17,2)
-addmargins(tab17)
+addmargins(tab17)  %>% pander(caption = "Blood Type Match")
 
 barplot(tab17,
         xlab='Match based on Blood Group', 
@@ -816,7 +818,7 @@ barplot(tab17,
 #2x2 table with margins
 tab18 <- table(bone$survival_status,bone$HLA_mismatch)
 tab18 <- prop.table(tab18,2)
-addmargins(tab18)
+addmargins(tab18)  %>% pander(caption = "HLA Mismatch")
 
 barplot(tab18,
         xlab='Match based on HLA', 
@@ -833,7 +835,7 @@ barplot(tab18,
 #2x2 table with margins
 tab19 <- table(bone$survival_status,bone$risk_group)
 tab19 <- prop.table(tab19,2)
-addmargins(tab19)
+addmargins(tab19)  %>% pander(caption = "Recipient Risk Group")
 
 barplot(tab19,
         xlab='Risk Group', 
@@ -849,7 +851,7 @@ barplot(tab19,
 #2x2 table with margins
 tab20 <- table(bone$survival_status,bone$stem_cell_source)
 tab20 <- prop.table(tab20,2)
-addmargins(tab20)
+addmargins(tab20)  %>% pander(caption = "Stem Cell Source")
 
 barplot(tab20,
         xlab='Stem Cell Source', 
@@ -866,7 +868,7 @@ barplot(tab20,
 #2x2 table with margins
 tab21 <- table(bone$survival_status,bone$tx_post_relapse)
 tab21 <- prop.table(tab21,2)
-addmargins(tab21)
+addmargins(tab21)  %>% pander(caption = "Treatment after 1st relapse")
 
 barplot(tab21,
         xlab='Treatment After Relapse', 
@@ -883,7 +885,7 @@ barplot(tab21,
 #2x2 table with margins
 tab22 <- table(bone$survival_status,bone$acute_GvHD_II_III_IV)
 tab22 <- prop.table(tab22,2)
-addmargins(tab22)
+addmargins(tab22)  %>% pander(caption = "Acute GVHD Stage")
 
 barplot(tab22,
         xlab='Development of Acute GVHD stage II, III or IV ',
@@ -900,7 +902,7 @@ barplot(tab22,
 #2x2 table with margins
 tab23 <- table(bone$survival_status,bone$acute_GvHD_III_IV)
 tab23 <- prop.table(tab22,2)
-addmargins(tab23)
+addmargins(tab23)  %>% pander(caption = "ACUTE GcVD stage III or IV")
 
 barplot(tab23,
         xlab='Development of Acute GVHD stage III or IV ',
@@ -917,7 +919,7 @@ barplot(tab23,
 #2x2 table with margins
 tab24 <- table(bone$survival_status,bone$extensive_chronic_GvHD)
 tab24 <- prop.table(tab24,2)
-addmargins(tab24)
+addmargins(tab24)  %>% pander(caption = "Chronic GvHD")
 
 barplot(tab24,
         xlab='Development of Chronic Acute GVHD', 
@@ -934,7 +936,7 @@ barplot(tab24,
 #2x2 table with margins
 tab25 <- table(bone$survival_status,bone$relapse)
 tab25 <- prop.table(tab25,2)
-addmargins(tab25)
+addmargins(tab25) %>% pander(caption = "Relapse")
 
 barplot(tab25,xlab='Relapse', 
         ylab='Survival = Yellow, Death = Red',
