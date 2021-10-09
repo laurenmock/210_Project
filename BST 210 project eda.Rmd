@@ -150,6 +150,7 @@ library(splitstackshape)
 library(ResourceSelection)
 library(LogisticDx)
 library(grid)
+library(gridExtra)
 
 bone <- read.csv("data.csv")
 ```
@@ -301,7 +302,8 @@ So far we can see the following:
 3) recipients' cmv status follows: absent (39.0%), present (53.5%), missing (7.5%)
 
 
-### Now look at recipient body mass, rh factor (+ or -), and risk group
+
+Now we can try to have a look at recipients' weight, rh factor (+ or -), and risk group
 
 Note: Changed data type of recipient body mass from character to numeric
 (Assuming weight has units of lbs)
@@ -331,7 +333,7 @@ bone %>%
             proportion = length(risk_group)/nrow(bone))
 ```
 
-So far we can see the following:
+So far we can see the following about our recipients:
 
 1) our recipients weighed between 15lbs to 60lbs (min weight is 6 lbs and max weight is 103.4 lbs)
 2) recipients' rh factor are as follows: plus (84.5%), minus (14.4%), NA (1.1%)
@@ -340,7 +342,7 @@ So far we can see the following:
 
 ### Scatterplots
 
-Looking only at the continous numerical variables next:
+Looking only at the numerical variables next:
 
 ```{r}
 bone_num <- bone %>% select(c(donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time, survival_status))
@@ -351,29 +353,25 @@ bone_num <- sapply(bone_num, as.numeric)
 ```{r, fig.height=10, fig.width=10}
 pairs(bone_num)
 ```
+
 We see at first glance based off of the correlation scatter plots that recipient age and body mass are very highly correlated (as we would expect). We also see many plots with binary variables, and several plots with points that are very far from the main cloud of data.
 
 
-#### Look at donor/recipient match variables
-
-**From here we can explore variables that track the match between the donors and recipients (match) and make note of the potential multicollinearity here.** 
-
-Match vs. mismatch
-
-
-**then we can run some correlation coeffs, get some plots with two variables.** 
-
+We can also use a correlation matrix to see the relationships between our variables, where applicable. The data is quite large with many binary variables, so perhaps our visualizations will aid us more. 
 
 ```{r}
 # correlation matrix
-cor(bone_num) %>% as.data.frame()
+cor(bone_num, use= "complete.obs") %>% as.data.frame() %>% pander()
 ```
 
 
 
 ### Compare outcome variable (survival_status) and numeric variables
 
-1. Change survival to binary (instead of numeric)
+1. Explore our binary outcome variable
+
+In order to explore our outcome variable of interest, survival status after bone marrow transplant, we must first change it to numeric. This graph shows us that 45.5% of our bone marrow transplant patients unfortunately did not survive, while 54.5% did survive. 
+
 ```{r, warning=FALSE}
 
 bone$survival_status <- ifelse(bone$survival_status == 1, "Died", "Survived") %>% as.factor()
@@ -398,78 +396,102 @@ bone %>%
 
 donor_age, recipient_age, recipient_body_mass, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, ANC_recovery, PLT_recovery, time_to_acute_GvHD_III_IV, survival_time
 
-```{r, warning = FALSE}
-par(mfrow=c(3,3))
+```{r, warning = FALSE, fig.height=12, fig.width=10}
 
-bone %>% 
+# construct plots of continuous predictors 
+c1 <- bone %>% 
   ggplot(aes(x = survival_status, y = donor_age)) +
   geom_boxplot(fill = "#990000", col = "black") +
-  ggtitle("Survival Status based on Age of Donor") +
+  ggtitle("Age of Donor") +
   xlab("Survival Status") +
   ylab("Age of Donor") +
   theme_wsj()+ theme(axis.title=element_text(size=12),
                      plot.title = element_text(size = 20))
 
 
-bone %>% 
+c2 <- bone %>% 
   ggplot(aes(x = survival_status, y = recipient_age)) +
   geom_boxplot(fill = "#990000", col = "black") +
-  ggtitle("Survival Status based on Age of Recipient") +
+  ggtitle("Age of Recipient") +
   xlab("Survival Status") +
   ylab("Age of Recipient") +
   theme_wsj()+ theme(axis.title=element_text(size=12),
                      plot.title = element_text(size = 20))
 
 
-bone %>% 
+c3 <- bone %>% 
   ggplot(aes(x = survival_status, y = as.numeric(recipient_body_mass))) +
   geom_boxplot(fill = "#990000", col = "black") +
-  ggtitle("Survival Status based on Recipient Body Mass") +
+  ggtitle("Recipient Body Mass") +
   xlab("Survival Status") +
   ylab("Recipient Body Mass") +
   theme_wsj()+ theme(axis.title=element_text(size=12),
                      plot.title = element_text(size = 15))
 
 
-bone %>% 
+c4 <- bone %>% 
   ggplot(aes(x = survival_status, y = as.numeric(CD34_x1e6_per_kg...CD34kgx10d6))) +
   geom_boxplot(fill = "#990000", col = "black") +
-  ggtitle("Survival Status based on CD34+ Dosage") +
+  ggtitle("CD34+ Dosage") +
   xlab("Survival Status") +
   ylab("CD34+ Dosage") +
   theme_wsj()+ theme(axis.title=element_text(size=12),
                      plot.title = element_text(size = 20))
 
 
-bone %>% 
+c5 <- bone %>% 
   ggplot(aes(x = survival_status, y = as.numeric(CD3_x1e8_per_kg))) +
   geom_boxplot(fill = "#990000", col = "black") +
-  ggtitle("Survival Status based on CD3+ Dosage") +
+  ggtitle("CD3+ Dosage") +
   xlab("Survival Status") +
   ylab("CD3+ Dosage") +
   theme_wsj()+ theme(axis.title=element_text(size=12),
                      plot.title = element_text(size = 20))
 
 
-bone %>% 
+c6 <- bone %>% 
   ggplot(aes(x = survival_status, y = as.numeric(CD3_to_CD34_ratio))) +
   geom_boxplot(fill = "#990000", col = "black") +
-  scale_y_continuous(trans = "log") +
-  ggtitle("Survival Status based on CD3+:CD34+ Ratio") +
+  scale_y_continuous(trans = "log", breaks = c(2,8,50,100)) +
+  ggtitle("CD3+:CD34+ Ratio") +
   xlab("Survival Status") +
   ylab("CD3+:CD34+ Ratio (log scale)") +
   theme_wsj()+ theme(axis.title=element_text(size=12),
                      plot.title = element_text(size = 15))
 
+# plot together
+grid.arrange(c1,c2,c3,c4,c5,c6, ncol = 2, nrow = 3)
+
 ```
 
-### Now compare outcome variable (survival_status) and numeric variables
+We can observe above the various relationships our variables have with the survival status outcome variable. I can not tell regression outcomes just from graphs, but we are particularly interested in variables such as CD34+ Dosage and CD3+ Dosage which tell us the amount of bone marrow transplanted. 
+
+
+### Comparison of Outcome (survival_status) and categorical variables
 
 #### Categorical Variables: 
-donor_ABO, recipient_age_int, recipient_ABO, disease, CMV_status, HLA_match..out.of.10., antigen, allele, HLA_group_1 
+donor_ABO, 
+
+recipient_age_int, 
+
+recipient_ABO, 
+
+disease, 
+
+CMV_status, 
+
+HLA_match..out.of.10., 
+
+antigen, allele, HLA_group_1 
 
 #### Binary Variables:
-donor_age_below_35 (yes/no), donor_CMV (present/absent), recipient_age_below_10 (yes/no), recipient_rh (plus/minus), recipient_CMV (present/absent), disease_group (malignant/nonmalignant), gender_match(female_to_male/other), ABO_match (matched/mismatched), HLA_mismatch (matched, mismatched), risk_group (high/low), stem_cell_source (peripheral_blood/bone_marrow),tx_post_relapse (yes/no), acute_GvHD_II_III_IV (yes/no), acute_GvHD_III_IV (yes/no), extensive_chronic_GvHD (yes/no), relapse (yes/no), survival_status (yes,no)
+donor_age_below_35 (yes/no), donor_CMV (present/absent), 
+recipient_age_below_10 (yes/no), recipient_rh (plus/minus), 
+recipient_CMV (present/absent), disease_group (malignant/nonmalignant), gender_match(female_to_male/other), ABO_match (matched/mismatched), 
+HLA_mismatch (matched, mismatched), risk_group (high/low), 
+stem_cell_source (peripheral_blood/bone_marrow), tx_post_relapse (yes/no), acute_GvHD_II_III_IV (yes/no), acute_GvHD_III_IV (yes/no), 
+extensive_chronic_GvHD (yes/no), relapse (yes/no), 
+survival_status (yes,no)
 
 ```{r, fig.height=10, fig.width=10}
 
