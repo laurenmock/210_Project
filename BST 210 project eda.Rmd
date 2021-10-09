@@ -1032,3 +1032,6 @@ Looking at these resulting graphs and tables we see some interesting relationshi
 (16) relapse (yes/no) - And lastly, as expected, those who underwent relapse had a much higher probability of death compared to those who did not undergo relapse. 
 
 
+## Question 11
+
+Project Attestation:  No member of this group is using these data or same/similar questions in any other course or course project, at HSPH.
