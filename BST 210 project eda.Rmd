@@ -8,8 +8,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-#### Group 4 Members:
+  
+#### *Group 4 Members:*
 
 Daniel Herrera  
 Willow Duffell  
@@ -54,8 +54,6 @@ Our primary outcome is survival status at the end of the follow-up period, which
 
 **Draft Statistical Analysis Plan**
 
-Draft Statistical Analysis Plan: 
-
 *I. Explain important variables (using "domain” knowledge)*
 
   a. Identify potential confounders and effect measure modifiers (EMM) 
@@ -70,7 +68,7 @@ Draft Statistical Analysis Plan:
 
 *III. Candidate Variables* 
 
-  a .Choose best variables to use to predict survival 
+  a. Choose best variables to use to predict survival 
 
 *IV. Model Selection*
 
