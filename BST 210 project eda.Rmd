@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
   
-#### *Group 4 Members:*
+#### *Group 4 Members:* 
 
 Daniel Herrera  
 Willow Duffell  
