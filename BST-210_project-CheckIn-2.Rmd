@@ -9,9 +9,110 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Logistic Regression
+### *Group 4 Members:* 
+
+Daniel Herrera  
+Willow Duffell  
+Lauren Mock
+
+```{r, warning=FALSE, include=FALSE}
+library(tidyverse)
+
+bone <- read.csv("data.csv")
+
+# remove HLA_match_raw (was already converted into a different column)
+bone <- select(bone, -HLA_match_raw)
+
+# convert numeric columns to numeric
+bone_num <- c("donor_age", "recipient_age", "recipient_body_mass", "CD34_x1e6_per_kg...CD34kgx10d6",
+           "CD3_x1e8_per_kg", "CD3_to_CD34_ratio", "ANC_recovery", "PLT_recovery",
+           "time_to_acute_GvHD_III_IV", "survival_time", "survival_status")
+
+bone[,bone_num] <- lapply(bone_num, function(x) as.numeric(bone[[x]]))
+```
+
+
+# 1) Logistic regression to predict survival
+
+We want to predict the probability of survival after transplantation, given known covariates that can be measured before transplantation. 
+
+*question: what determines dosage amount? so should we include this as a predictor or not?*
 
 ```{r}
+# remove variables that are measured after transplantation
+predictors <- bone[,c(1:24,37)] # selects only predictors and survival (the outcome)
+
+# logistic model with all covariates
+mod_all_vars <- glm(survival_status ~ ., family = binomial(), data = predictors)
+summary(mod_all_vars)
+
+p_hats <- mod_all_vars$fitted.values
+
+# only predicts 2 values, not sure why...
+
+# regardless, we will definitely need to select some variables that make sense
 
 ```
+
+
+## Variables related to the donor
+
+```{r}
+# variables related to the donor
+mod_donor <- glm(survival_status ~ donor_age + donor_age_below_35 + donor_ABO + donor_CMV, 
+            family = binomial(), data = predictors)
+summary(mod_donor)
+
+```
+
+
+## Variables related to the recipient
+
+```{r}
+mod_recip <- glm(survival_status ~ recipient_age + recipient_gender + recipient_body_mass +
+                   recipient_ABO + recipient_rh + recipient_CMV, 
+            family = binomial(), data = predictors)
+summary(mod_recip)
+
+
+mod_disease <- glm(survival_status ~ disease + disease_group, 
+            family = binomial(), data = predictors)
+summary(mod_disease)
+
+```
+
+
+
+## Variables related to the closeness of the match
+
+```{r}
+mod_match <- glm(survival_status ~ gender_match + ABO_match + CMV_status + HLA_match..out.of.10. + 
+            antigen + allele,
+            family = binomial(), data = predictors)
+summary(mod_match)
+p_hats <- mod_match$fitted.values
+head(p_hats, 30)
+mean(p_hats)
+
+# looks like something weird is happening with antigen (very bad predictor of survival)
+mod_match <- glm(survival_status ~ gender_match + ABO_match + CMV_status + HLA_match..out.of.10. + 
+             allele,
+            family = binomial(), data = predictors)
+summary(mod_match)
+p_hats <- mod_match$fitted.values
+head(p_hats, 30)
+mean(p_hats)
+# when we remove antigen, it looks pretty normal
+
+```
+
+
+## Variables related to stem cell source
+
+```{r}
+mod_source <- glm(survival_status ~ stem_cell_source, 
+            family = binomial(), data = predictors)
+summary(mod_source)
+```
+
 
