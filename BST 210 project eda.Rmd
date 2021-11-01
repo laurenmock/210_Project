@@ -1,5 +1,5 @@
 ---
-title: "Week 5 lab BST 210"
+title: "BST 210 Project: EDA"
 author: "Daniel Herrera, Willow Duffell, Lauren Mock"
 date: "10/9/2021"
 output:
