@@ -1,0 +1,11 @@
+---
+title: "BST 210 Project: Check-In 2"
+author: "Daniel Herrera, Willow Duffell, Lauren Mock"
+date: "11/6/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
