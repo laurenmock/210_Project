@@ -208,7 +208,7 @@ Our model here has an accuracy of 65.41%
 #find complete cases only
 cases_comp <- predictors %>% 
   select(c(survival_status, recipient_age, recipient_gender, recipient_body_mass,
-           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source,disease, gender_match, ABO_match, CMV_status, stem_cell_source)) %>%
+           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status, stem_cell_source)) %>%
   drop_na()
 
 
@@ -267,4 +267,53 @@ With an AIC value of 239.57
 
 
 So, whether we use the forward or backwards selection process, we are given the same model. 
+
+
+Summary statistics of this model are given below:
+
+Here we see that this model gives an overall accuracy of 66% (getting a little better) with sensitivity of 45.7% and specificity of 82.4%. Still, we are not classifying deaths with a very high success rate (yet!)
+```{r}
+mod.result <- glm(survival_status ~ stem_cell_source + recipient_body_mass + as.factor(recipient_rh) + disease,
+                  data = cases_comp,
+                  family = binomial())
+summary(mod.result)
+
+
+prediction <- ifelse(mod.result$fitted.values > 0.45, 1, 0) # Changed the cutoff to get better results for sensitivity, lowers overall accuracy though
+
+
+confusionMatrix(data = as.factor(prediction), 
+                reference = as.factor(cases_comp$survival_status),
+                positive = "1")
+```
+
+
+Are biggest issue seems to be our sensitivity, or having our model correctly predict a case of death. Let's see where the max possible sensitivity could be based on our current predictive model based on an ROC curve and the area under the curve.
+
+```{r}
+library(pROC)
+
+roc_logit <- roc(cases_comp$survival_status, mod.result$fitted.values)
+
+ggroc(list("Logistic" = roc_logit)) +
+  theme(legend.title = element_blank()) +
+  geom_segment(aes(x = 1, xend = 0, y = 0, yend = 1), color = "black", linetype = "dashed") +
+  xlab("Sensitivity") +
+  ylab("Specificity") +
+  ggtitle("ROC Curve")
+
+auc(roc_logit) # Want this to be >0.7
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
