@@ -81,7 +81,9 @@ mod_donor <- glm(survival_status ~ donor_age + donor_ABO + donor_CMV,
 summary(mod_donor)
 
 prediction <- ifelse(mod_donor$fitted.values > 0.5, 1, 0) 
-confusionMatrix(data = as.factor(prediction), reference = as.factor(predictors$survival_status))
+confusionMatrix(data = as.factor(prediction), 
+                reference = as.factor(predictors$survival_status),
+                positive = "1")
 ```
  
 
@@ -108,7 +110,9 @@ mod_recip <- glm(survival_status ~ recipient_age + recipient_gender + recipient_
             family = binomial(), data = recip_complete)
 summary(mod_recip)
 prediction <- ifelse(mod_recip$fitted.values > 0.5, 1, 0) 
-confusionMatrix(data = as.factor(prediction), reference = as.factor(recip_complete$survival_status))
+confusionMatrix(data = as.factor(prediction), 
+                reference = as.factor(recip_complete$survival_status),
+                positive = "1")
 
 
 mod_disease <- glm(survival_status ~ disease + disease_group, 
@@ -125,7 +129,9 @@ mod_disease <- glm(survival_status ~ disease ,
 summary(mod_disease)
 
 prediction <- ifelse(mod_disease$fitted.values > 0.5, 1, 0) 
-confusionMatrix(data = as.factor(prediction), reference = as.factor(predictors$survival_status))
+confusionMatrix(data = as.factor(prediction),
+                reference = as.factor(predictors$survival_status),
+                positive = "1")
 ```
 
 
@@ -153,14 +159,16 @@ mod_match <- glm(survival_status ~ gender_match + ABO_match + CMV_status + HLA_m
             family = binomial(), data = predictors)
 summary(mod_match)
 prediction <- ifelse(mod_match$fitted.values > 0.5, 1, 0) 
-confusionMatrix(data = as.factor(prediction), reference = as.factor(predictors$survival_status))
+confusionMatrix(data = as.factor(prediction), 
+                reference = as.factor(predictors$survival_status),
+                positive = "1")
 
 ```
 
 
 ## Variables related to stem cell source
 
-Again, we are seeing that are model is not doing to well in terms of accuracy of prediction. However, the model for stem cell source is doing well in terms of sensitivity, unfortunately this is offset by its specificiity. 
+Again, we are seeing that are model is not doing to well in terms of accuracy of prediction. However, the model for stem cell source is doing well in terms of sensitivity, unfortunately this is offset by its specificity. 
 
 ```{r}
 mod_source <- glm(survival_status ~ stem_cell_source, 
@@ -169,8 +177,11 @@ summary(mod_source)
 
 
 
-prediction <- ifelse(mod_source$fitted.values > 0.5, 1, 0) 
-confusionMatrix(data = as.factor(prediction), reference = as.factor(predictors$survival_status))
+prediction <- ifelse(mod_source$fitted.values > 0.5, 1, 0)
+
+confusionMatrix(data = as.factor(prediction), 
+                reference = as.factor(predictors$survival_status),
+                positive = "1")
 
 ```
 
@@ -197,7 +208,7 @@ Our model here has an accuracy of 65.41%
 #find complete cases only
 cases_comp <- predictors %>% 
   select(c(survival_status, recipient_age, recipient_gender, recipient_body_mass,
-           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source,disease, gender_match, ABO_match, CMV_status, stem_cell_source)) %>% 
+           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source,disease, gender_match, ABO_match, CMV_status, stem_cell_source)) %>%
   drop_na()
 
 
@@ -207,11 +218,13 @@ full_mod <- glm(survival_status ~ donor_age  + stem_cell_source + recipient_age 
 
 summary(full_mod)
 prediction <- ifelse(full_mod$fitted.values > 0.5, 1, 0) 
-confusionMatrix(data = as.factor(prediction), reference = as.factor(cases_comp$survival_status))
+confusionMatrix(data = as.factor(prediction), 
+                reference = as.factor(cases_comp$survival_status),
+                positive = "1")
 ```
+
+
 We can try to use forward selection here: 
-
-
 ```{r}
 library(broom)
 
