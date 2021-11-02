@@ -71,7 +71,7 @@ mod_donor <- glm(survival_status ~ donor_age + donor_age_below_35 + donor_ABO + 
 head(mod_donor$fitted.values)
 ```
 
-We can then decide to remove the variable for donor_age_below_35 because of multicolineary. including this variable will not allow us to properly "hold other variables constant" since the variable age modifies this variable of age_below_35. 
+We can then decide to remove the variable for donor_age_below_35 because of multicolineary. Including this variable will not allow us to properly "hold other variables constant" since the variable age modifies this variable of age_below_35. 
 
 We see here that our predictors are pretty bad, even on a testing only dataset.
 
@@ -211,8 +211,8 @@ confusionMatrix(data = as.factor(prediction), reference = as.factor(cases_comp$s
 ```
 We can try to use forward selection here: 
 
-```{r}
 
+```{r}
 library(broom)
 
 cases_comp <- cases_comp %>% 
@@ -221,11 +221,37 @@ cases_comp <- cases_comp %>%
 
 mod_basic <- glm(survival_status ~ 1, data=cases_comp, family = "binomial")
 stepModel <- step(mod_basic, direction="forward",
-scope=(~ donor_age  + stem_cell_source + recipient_age  + recipient_body_mass + as.factor(recipient_rh) + disease + gender_match + ABO_match + CMV_status + stem_cell_source),
-data=cases_comp)
+                  scope=(~ donor_age  + stem_cell_source + recipient_age  + recipient_body_mass + as.factor(recipient_rh) + disease + gender_match + ABO_match + CMV_status + stem_cell_source),
+                  data=cases_comp)
 
 tidy(stepModel)
 ```
 
+Using forward selection, we are given the following model:
+
+survival_status ~ recipient_body_mass + disease + as.factor(recipient_rh) + stem_cell_source
+With an AIC of 239.57
+
+
 
 Next, we can try backwards selection:
+```{r}
+mod_back <- glm(survival_status ~ donor_age  + stem_cell_source + recipient_age  + recipient_body_mass + as.factor(recipient_rh) + disease + gender_match + ABO_match + CMV_status + stem_cell_source, 
+                data = cases_comp, 
+                family = "binomial")
+
+backStepModel <- step(mod_back, 
+                      direction = "backward",
+                      data = cases_comp)
+
+tidy(backStepModel)
+```
+
+With this model selection method, we are given the following model:
+
+survival_status ~ stem_cell_source + recipient_body_mass + as.factor(recipient_rh) + disease
+With an AIC value of 239.57
+
+
+So, whether we use the forward or backwards selection process, we are given the same model. 
+
