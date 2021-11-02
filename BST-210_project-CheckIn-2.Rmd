@@ -1,8 +1,10 @@
 ---
-title: "BST 210 Project: Check-In 2"
+title: 'BST 210 Project: Check-In 2'
 author: "Daniel Herrera, Willow Duffell, Lauren Mock"
 date: "11/6/2021"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -17,6 +19,7 @@ Lauren Mock
 
 ```{r, warning=FALSE, include=FALSE}
 library(tidyverse)
+library(caret)
 
 bone <- read.csv("data.csv")
 
@@ -47,6 +50,9 @@ mod_all_vars <- glm(survival_status ~ ., family = binomial(), data = predictors)
 summary(mod_all_vars)
 
 p_hats <- mod_all_vars$fitted.values
+head(p_hats)
+
+
 
 # only predicts 2 values, not sure why...
 
@@ -61,18 +67,48 @@ p_hats <- mod_all_vars$fitted.values
 # variables related to the donor
 mod_donor <- glm(survival_status ~ donor_age + donor_age_below_35 + donor_ABO + donor_CMV, 
             family = binomial(), data = predictors)
+
+head(mod_donor$fitted.values)
+```
+
+We can then decide to remove the variable for donor_age_below_35 because of multicolineary. including this variable will not allow us to properly "hold other variables constant" since the variable age modifies this variable of age_below_35. 
+
+We see here that our predictors are pretty bad, even on a testing only dataset.
+
+```{r}
+mod_donor <- glm(survival_status ~ donor_age + donor_ABO + donor_CMV, 
+            family = binomial(), data = predictors)
 summary(mod_donor)
 
+prediction <- ifelse(mod_donor$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction), reference = as.factor(predictors$survival_status))
 ```
+ 
 
 
 ## Variables related to the recipient
 
+Here we have to deal with the issue of having missing values for the variable recipient_body_mass.
+We elect to remove the variables here since only two values are missing and a sample of 185 should be sufficient. 
+
+We can later choose to explore these cases individually to assess if there was any particular reason that these cases should be explored further. 
+
+Our model here is not great, an accuracy of 64.32%. It does not have a balanced sensitivity versus specificity and is actually better at predicting those among the population with outcome of 1, death. This may be to our benefit though, as we would really like to know, of those who died, how many are we predicting death. 
+
+
 ```{r}
+#create subset of data with no missing values, ie remove 2 missing bmi
+recip_complete <- predictors %>% 
+  select(c(survival_status, recipient_age, recipient_gender, recipient_body_mass,
+           recipient_ABO, recipient_rh, recipient_CMV)) %>% 
+  drop_na()
+
 mod_recip <- glm(survival_status ~ recipient_age + recipient_gender + recipient_body_mass +
-                   recipient_ABO + recipient_rh + recipient_CMV, 
-            family = binomial(), data = predictors)
+                   recipient_ABO + as.factor(recipient_rh) + as.factor(recipient_CMV), 
+            family = binomial(), data = recip_complete)
 summary(mod_recip)
+prediction <- ifelse(mod_recip$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction), reference = as.factor(recip_complete$survival_status))
 
 
 mod_disease <- glm(survival_status ~ disease + disease_group, 
@@ -81,9 +117,24 @@ summary(mod_disease)
 
 ```
 
+Since disease_group and disease have overlap in the shared malignant level, we will select only one. Here we find an accuracy of 59.36% and no statistically significant predictor variables. 
+
+```{r}
+mod_disease <- glm(survival_status ~ disease , 
+            family = binomial(), data = predictors)
+summary(mod_disease)
+
+prediction <- ifelse(mod_disease$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction), reference = as.factor(predictors$survival_status))
+```
+
 
 
 ## Variables related to the closeness of the match
+
+Per our medical expert, not specifically domain expert, the suggestion is to not include HLA Match AND antigen/allele. In this case we will choose to only choose the variable HLA Match out of 10. 
+
+We see again here that our model is pretty ineffective as detecting survival status with an accuracy of 58.82%. 
 
 ```{r}
 mod_match <- glm(survival_status ~ gender_match + ABO_match + CMV_status + HLA_match..out.of.10. + 
@@ -95,24 +146,86 @@ head(p_hats, 30)
 mean(p_hats)
 
 # looks like something weird is happening with antigen (very bad predictor of survival)
-mod_match <- glm(survival_status ~ gender_match + ABO_match + CMV_status + HLA_match..out.of.10. + 
-             allele,
+
+# when we remove antigen, it looks pretty normal
+# we can explore it without antigen or allele
+mod_match <- glm(survival_status ~ gender_match + ABO_match + CMV_status + HLA_match..out.of.10.,
             family = binomial(), data = predictors)
 summary(mod_match)
-p_hats <- mod_match$fitted.values
-head(p_hats, 30)
-mean(p_hats)
-# when we remove antigen, it looks pretty normal
+prediction <- ifelse(mod_match$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction), reference = as.factor(predictors$survival_status))
 
 ```
 
 
 ## Variables related to stem cell source
 
+Again, we are seeing that are model is not doing to well in terms of accuracy of prediction. However, the model for stem cell source is doing well in terms of sensitivity, unfortunately this is offset by its specificiity. 
+
 ```{r}
 mod_source <- glm(survival_status ~ stem_cell_source, 
             family = binomial(), data = predictors)
 summary(mod_source)
+
+
+
+prediction <- ifelse(mod_source$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction), reference = as.factor(predictors$survival_status))
+
 ```
 
 
+This all lead me to wonder why our predictions are so subpar. Perhaps we should look at the prevalence of death?
+
+We see that there are a reasonable amount who survived and died indicating there is not a substantial imbalance which we would need to consider. 
+
+```{r}
+bone %>% 
+  count(survival_status)
+```
+
+
+Below we will try again with a more "full" model now that we have parsed out some variables due to concerns of collinearity due to variables measuring the same or similar metrics. 
+We remove variables included in recipient and donor that can be summarized by '..._match" variables.
+
+Our model here has an accuracy of 65.41%
+
+
+```{r}
+# attempt at a similar "full model"
+
+#find complete cases only
+cases_comp <- predictors %>% 
+  select(c(survival_status, recipient_age, recipient_gender, recipient_body_mass,
+           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source,disease, gender_match, ABO_match, CMV_status, stem_cell_source)) %>% 
+  drop_na()
+
+
+full_mod <- glm(survival_status ~ donor_age  + stem_cell_source + recipient_age  + recipient_body_mass + as.factor(recipient_rh) + disease + gender_match + ABO_match + CMV_status + stem_cell_source, 
+                family = binomial(), 
+                data = cases_comp)
+
+summary(full_mod)
+prediction <- ifelse(full_mod$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction), reference = as.factor(cases_comp$survival_status))
+```
+We can try to use forward selection here: 
+
+```{r}
+
+library(broom)
+
+cases_comp <- cases_comp %>% 
+  select(c(survival_status, recipient_age, recipient_body_mass,
+           recipient_rh, disease, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status))
+
+mod_basic <- glm(survival_status ~ 1, data=cases_comp, family = "binomial")
+stepModel <- step(mod_basic, direction="forward",
+scope=(~ donor_age  + stem_cell_source + recipient_age  + recipient_body_mass + as.factor(recipient_rh) + disease + gender_match + ABO_match + CMV_status + stem_cell_source),
+data=cases_comp)
+
+tidy(stepModel)
+```
+
+
+Next, we can try backwards selection:
