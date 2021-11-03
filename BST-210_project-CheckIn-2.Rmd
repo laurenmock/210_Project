@@ -20,6 +20,8 @@ Lauren Mock
 ```{r, warning=FALSE, include=FALSE}
 library(tidyverse)
 library(caret)
+library(rpart)
+library(rpart.plot)
 
 bone <- read.csv("data.csv")
 
@@ -307,7 +309,34 @@ auc(roc_logit) # Want this to be >0.7
 
 
 
+Next we can try decision trees. We see here that the predictive accuracy is much higher now! We have an accuracy of 77.3% and a balanced sensitivity and specificity. 
 
+```{r}
+cases_comp <- cases_comp %>% 
+  select(c(survival_status, recipient_age, recipient_body_mass,
+           recipient_rh, disease, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status))
+
+
+
+# will fit the tree 
+fit <- rpart(as.factor(survival_status) ~ ., data = cases_comp)
+
+# will plot the tree 
+rpart.plot(fit, cex = 0.5)
+
+# create new dataframe without survival outcomes
+df <- subset(cases_comp, select = -c(survival_status))
+
+#make predicitons and cutoffs
+mypreds <- predict(fit, df)
+predictions <- ifelse(mypreds[,2] > 0.5, 1, 0)
+
+
+confusionMatrix(data = as.factor(predictions), 
+                reference = as.factor(cases_comp$survival_status),
+                positive = "1")
+
+```
 
 
 
