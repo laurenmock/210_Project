@@ -3,6 +3,8 @@ title: 'BST 210 Project: Check-In 2'
 author: "Daniel Herrera, Willow Duffell, Lauren Mock"
 date: "11/6/2021"
 output:
+  html_document:
+    df_print: paged
   pdf_document:
     df_print: paged
 ---
@@ -338,6 +340,9 @@ confusionMatrix(data = as.factor(predictions),
 
 ```
 
+
+
+
 # Secondary Analysis
 
 We can also look at some secondary analyses. We read a journal article that found that patients who received peripheral stem cell transplants were more likely to develop graft-versus-host disease (GVHD). We can easily check to see if this holds true in our data.
@@ -365,7 +370,270 @@ table(survived$acute_GvHD_II_III_IV, survived$stem_cell_source) %>%
 
 
 
+Another Secondary Analysis we looked at was the possible prediction and association of CD34 dosage and CD3 dosage on survival outcome. 
+
+*Include a little research on the reasoning behind dosage levels
+CD34+ = CD34+ cell dose per kg of recipient body weight (10^6/kg)
+CD3 = CD3+ cell dose per kg of recipient body weight (10^8/kg)
 
 
+Let's first look at a graph with the 2 different dosages and their effect on survival outcome
+```{r, fig.height=7}
+library(gridExtra)
+
+p1 <- bone %>%
+  ggplot(aes(x = CD34_x1e6_per_kg...CD34kgx10d6, y = CD3_x1e8_per_kg, color = as.factor(survival_status))) +
+  scale_fill_discrete(name="Survival\nOutcome",
+                         labels=c("Survival", "Death")) +   # Help is needed :(
+  geom_point() +
+  xlab("CD34+") +
+  ylab("CD3") +
+  ggtitle("Relationship between CD3 and CD34+")
+
+
+p2 <- bone %>%
+  ggplot(aes(x = CD34_x1e6_per_kg...CD34kgx10d6, y = CD3_x1e8_per_kg, color = as.factor(survival_status))) +
+  geom_point() +
+  scale_y_continuous(trans = "sqrt") +
+  scale_x_continuous(trans = "sqrt") +
+    xlab("CD34+") +
+  ylab("CD3") +
+  ggtitle("Relationship between CD3 and CD34+ (with sqrt transform)")
+
+
+grid.arrange(p1, p2)
+```
+
+
+With the square root transform we are able to see a little bit of a trend.Just based off of a first glance, it looks like there were more death outcomes with fewer dosages of CD3 and CD34+
+
+Let's look at a model with the 2 different dosages as predictors. These variables are in per kg of the recipients body weight, so we do not have to account for recipient body weight in our model. But maybe we can look at age of the recipient and see if it's a necessary predictor to add.We can also explore the ratio variable of the two dosages.
+
+```{r}
+CD <- bone %>%
+  select(CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg, CD3_to_CD34_ratio, recipient_age, survival_status) %>%
+  drop_na()
+```
+
+Let's first start with a simple model:
+```{r}
+simple.cd.mod <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1e8_per_kg,
+                     data = CD,
+                     family = binomial())
+
+summary(simple.cd.mod)
+```
+
+We see that CD3 is a significant variable with a p-value of 0.0237
+We also have an AIC of 245.48
+
+Let's try to add recipient age into the model
+```{r}
+age.cd.mod <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1e8_per_kg + recipient_age,
+                  data = CD,
+                  family = binomial())
+
+summary(age.cd.mod)
+```
+
+We get a slightly higher AIC value, and the p-values don't give us any indication that it is necessary to add into our mode. But let's check for confounding first. 
+
+Age acting as a confounder on CD34+ and CD3 via 10% rule
+```{r}
+# CD34+
+(-0.009609 - -0.001904) / (-0.009609) # No confounding
+
+#CD3
+(-0.120459 - -0.107012) / (-0.120459) # No confounding
+```
+
+
+Great no confounding, now let's quickly check for EMM for each doseage variable
+```{r}
+age.cd.mod.emm1 <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1e8_per_kg + recipient_age + recipient_age*CD34_x1e6_per_kg...CD34kgx10d6, 
+                       data = CD,
+                       family = binomial())
+
+summary(age.cd.mod.emm1)
+
+
+age.cd.mod.emm2 <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1e8_per_kg + recipient_age + recipient_age*CD3_x1e8_per_kg,
+                       data = CD,
+                       family = binomial())
+
+summary(age.cd.mod.emm2)
+```
+
+Great, so significant interaction terms, so no effect measure modification.
+
+So let's just stick with our original model, but first let's quickly look at a model with only the dosage ratio.
+
+
+```{r}
+dose.ratio.mod <- glm(survival_status ~ CD3_to_CD34_ratio,
+                      data = CD,
+                      family = binomial())
+
+summary(dose.ratio.mod)
+```
+Not a very significant p-value and much a higher AIC value compared to our simple model.
+
+
+Okay, now back to the original model
+```{r}
+summary(simple.cd.mod)
+```
+
+
+The resulting $\hat{\beta_1}$ is the log Odds Ratio of death occurring in those with any level of CD34+ dose versus those with one unit less of CD34+, holding CD3 dosage constant. We then find the odds ratio by taking the exponential of B1 finding:$\hat{OR} = e^{\hat{\beta_1}} = e^{-0.009609} = 0.990437 $.
+
+Therefore, those with any level of CD34+ dose has 0.990437 times the odds of death compared to those with a CD34+ dose of one unit lower, on average, holding CD3 dosage constant, Which is not very significant of a value.
+
+
+What if we look at a 10 unit change in dosage?
+Looking at the effect of a 10-unit change of CD34+ dosage, we would have an odds ratio of:
+
+$\hat{OR} = e^{10\hat{\beta_1}} = e^{(10*-0.009609)} =  0.9083823 $
+
+So for those with any level of CD34+ dose have 0.9083823 times the odds of death compared to those with with a CD34+ dosage of 10 units lower, on average, holding CD3 constant, still not a huge difference.
+
+```{r}
+sd(CD$CD34_x1e6_per_kg...CD34kgx10d6)
+```
+
+----
+My brain is spacing, but need to look up again how to interpret CD3 in this model... is it just exp(B2)?
+---
+
+
+
+
+
+
+
+Let's look at the association of survival outcome and each dosage alone
+```{r, fig.width=6}
+
+p1 <- CD %>%
+  ggplot(aes(x = as.factor(survival_status), y = CD34_x1e6_per_kg...CD34kgx10d6, color = survival_status)) +
+  geom_boxplot() +
+  theme(legend.position = "none") +
+  xlab("Survival Outcome") +
+  ylab("CD34+ Dosage") +
+  ggtitle("Association between CD34+ Dosage and Survival")
+
+
+p2 <- CD %>%
+  ggplot(aes(x = as.factor(survival_status), y = CD3_x1e8_per_kg, color = survival_status)) +
+  geom_boxplot() +
+  theme(legend.position = "none") +
+  xlab("Survival Outcome") +
+  ylab("CD3 Dosage") +
+  ggtitle("Association between CD3 Dosage and Survival")
+
+
+grid.arrange(p1,p2, nrow = 1)
+```
+
+There is definitely an association with each dosage and survival outcome.
+
+
+
+
+---
+Have some questions on this: what should we do here??
+```{r}
+# Mean of 5.38 which means that most times CD3 > CD34+
+summary(CD$CD3_to_CD34_ratio)
+
+
+# CD3 is in units of 10^6 while CD34+ is in units of 10^8... do we need to make them the same in order for analysis?
+CD_new <- CD %>% 
+  mutate(CD34 = CD34_x1e6_per_kg...CD34kgx10d6) %>%
+  mutate(CD3 = CD3_x1e8_per_kg / 100) %>%
+  mutate(CD3.to.CD34.newratio = CD3 / CD34)
+
+head(CD_new)
+
+```
+
+
+
+
+Looking at models with each of the dosages as its own predictor
+```{r}
+CD34.mod <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6,
+                data = CD,
+                family = binomial())
+summary(CD34.mod)
+
+
+CD3.mod <- glm(survival_status ~ CD3_x1e8_per_kg,
+                data = CD,
+                family = binomial())
+summary(CD3.mod)
+```
+
+The CD3 variable is much more significant by p-value in its own model than the CD34+ variable. 
+
+
+
+---
+Next looking at predicting survival outcome based on CD34+ and CD3 dosages:
+
+We saw before we may be able to come up with a decent predictive model of survival based on CD3 and CD34+ dosage since we could see a slight association in this graph:
+```{r}
+bone %>%
+  ggplot(aes(x = CD34_x1e6_per_kg...CD34kgx10d6, y = CD3_x1e8_per_kg, color = as.factor(survival_status))) +
+  geom_point() +
+  scale_y_continuous(trans = "sqrt") +
+  scale_x_continuous(trans = "sqrt") +
+    xlab("CD34+") +
+  ylab("CD3") +
+  ggtitle("Relationship between CD3 and CD34+ (with sqrt transform)")
+```
+
+
+Let's try out some various predictive models to see if there's one that predictos death better than others.
+```{r}
+# Model with both dosages
+# simple.cd.mod
+
+prediction <- ifelse(simple.cd.mod$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction), 
+                reference = as.factor(CD$survival_status),
+                positive = "1")
+
+
+
+# CD3 only model
+# CD3.mod
+
+prediction2 <- ifelse(CD3.mod$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction2), 
+                reference = as.factor(CD$survival_status),
+                positive = "1")
+
+
+# CD34+ only model
+# CD34.mod 
+
+prediction3 <- ifelse(CD34.mod$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction3), 
+                reference = as.factor(CD$survival_status),
+                positive = "1")
+
+
+
+# Ratio only model
+# dose.ratio.mod
+
+prediction4 <- ifelse(dose.ratio.mod$fitted.values > 0.5, 1, 0) 
+confusionMatrix(data = as.factor(prediction4), 
+                reference = as.factor(CD$survival_status),
+                positive = "1")
+
+
+```
 
 
