@@ -292,17 +292,17 @@ confusionMatrix(data = as.factor(prediction),
 ```
 
 
-Are biggest issue seems to be our sensitivity, or having our model correctly predict a case of death. Let's see where the max possible sensitivity could be based on our current predictive model based on an ROC curve and the area under the curve.
+Our biggest issue seems to be our sensitivity, or having our model correctly predict a case of death. Let's see where the max possible sensitivity could be based on our current predictive model based on an ROC curve and the area under the curve.
 
 ```{r}
 library(pROC)
 
 roc_logit <- roc(cases_comp$survival_status, mod.result$fitted.values)
 
-ggroc(list("Logistic" = roc_logit)) +
+ggroc(list("Logistic" = roc_logit), legacy.axes = T) +
   theme(legend.title = element_blank()) +
-  geom_segment(aes(x = 1, xend = 0, y = 0, yend = 1), color = "black", linetype = "dashed") +
-  xlab("Specificity") +
+  geom_abline(color = "black", linetype = "dashed", alpha = 0.5) +
+  xlab("1- Specificity") +
   ylab("Sensitivity") +
   ggtitle("ROC Curve")
 
@@ -314,9 +314,10 @@ auc(roc_logit) # Want this to be >0.7
 Next we can try decision trees. We see here that the predictive accuracy is much higher now! We have an accuracy of 77.3% and a balanced sensitivity and specificity. 
 
 ```{r}
-cases_comp <- cases_comp %>% 
-  select(c(survival_status, recipient_age, recipient_body_mass,
-           recipient_rh, disease, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status))
+cases_comp <- predictors %>% 
+  select(c(survival_status, recipient_age, recipient_gender, recipient_body_mass,
+           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status, stem_cell_source)) %>%
+  drop_na()
 
 
 
@@ -340,6 +341,53 @@ confusionMatrix(data = as.factor(predictions),
 
 ```
 
+Additionally, now that we have done some extra work to understand and better utilize the dosages of CD3 and CD34 we will use those in our model also to see if they add to our accuracy in our data; note: we do realize all of this has been on all of our data (i.e. no split of training data/testing data), which we have done for now to get a general understanding of our models. 
+
+We note here that in order to include cd34 we have to omit 5 values from our dataset. Since this falls below the 5% total, we will ignore this for now; however, we should investigate these further and perhaps use logistic regression to assess whether this missingness is completely at random. 
+
+We notice here that the inclusion of the variables related to cd3 and cd34 dosages are part of the model for the decision tree classification. However, this form of our decision tree does not predict as well in our current dataset if we use accuracy as the measure (74.2%). We will certainly perform a comparison with testing and training data later as the variance of this model may be preferrable to the previous or vice versa.  
+
+```{r}
+cases_comp2 <- bone %>% 
+  select(c(survival_status, recipient_age, recipient_gender, recipient_body_mass,
+           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status, stem_cell_source, CD3_x1e8_per_kg, CD34_x1e6_per_kg...CD34kgx10d6)) %>%
+  drop_na()
+
+
+
+# will fit the tree 
+fit <- rpart(as.factor(survival_status) ~ ., data = cases_comp2)
+
+# will plot the tree 
+rpart.plot(fit, cex = 0.5)
+
+# create new dataframe without survival outcomes
+df <- subset(cases_comp2, select = -c(survival_status))
+
+#make predicitons and cutoffs
+mypreds <- predict(fit, df)
+predictions <- ifelse(mypreds[,2] > 0.5, 1, 0)
+
+
+confusionMatrix(data = as.factor(predictions), 
+                reference = as.factor(cases_comp2$survival_status),
+                positive = "1")
+```
+
+Lastly, let us use another form of supervised learning, k nearest neighbors, to see how we can do on our current data. 
+
+We see that using all predictors of interest, we see a lower accuracy 0.6593 than our previous decision tree model. We will include this in our test/training data testing since its' accuracy is higher than our previous logistic regression models. 
+
+```{r}
+library(caret)
+
+knn_model <- knn3(survival_status ~ ., data = cases_comp2, k = 10) # chose 10 nearest neighbors
+p_hat_knn <- predict(knn_model, newdata = df)[,2] # chose column 2 because this is prob y=1
+mypred_knn <- ifelse(p_hat_knn > 0.5, 1, 0)
+
+confusionMatrix(data = as.factor(mypred_knn), reference = as.factor(cases_comp2$survival_status), positive = "1")
+```
+
 
 
 
@@ -347,19 +395,24 @@ confusionMatrix(data = as.factor(predictions),
 
 We can also look at some secondary analyses. We read a journal article that found that patients who received peripheral stem cell transplants were more likely to develop graft-versus-host disease (GVHD). We can easily check to see if this holds true in our data.
 
+We use a chis-square test here to see if stem cell source is independent of GVHD, and thus has no association. We see that we fail to reject the null and thus conclude that there is no relationship between the two variables (independence).
+
 ```{r}
 # more people who received peripheral stem cells survived, meaning that they were
 # more likely to have time to develop GVHD
-table(bone$survival_status, bone$stem_cell_source) %>%
+table(survival = bone$survival_status, traansplant = bone$stem_cell_source) %>%
   prop.table(margin = 2)
 
 # proportion with GVHD
-table(bone$acute_GvHD_II_III_IV, bone$stem_cell_source) %>%
+table(gvhd = bone$acute_GvHD_II_III_IV, transplant = bone$stem_cell_source) %>%
   prop.table(margin = 2)
+
+chisq.test(bone$stem_cell_source, bone$acute_GvHD_II_III_IV)
+
 
 # what if we only look at people who survived?
 survived <- filter(bone, survival_status == 0)
-table(survived$acute_GvHD_II_III_IV, survived$stem_cell_source) %>%
+table(GvHD = survived$acute_GvHD_II_III_IV,transplant =  survived$stem_cell_source) %>%
   prop.table(margin = 2)
 # note: there are only a few people included in this table
 
