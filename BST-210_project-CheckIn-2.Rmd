@@ -3,7 +3,7 @@ title: 'BST 210 Project: Check-In 2'
 author: "Daniel Herrera, Willow Duffell, Lauren Mock"
 date: "11/6/2021"
 output:
-  html_document:
+  pdf_document:
     df_print: paged
 ---
 
@@ -37,7 +37,7 @@ bone[,bone_num] <- lapply(bone_num, function(x) as.numeric(bone[[x]]))
 ```
 
 
-# 1) Logistic regression to predict survival
+# Logistic regression to predict survival
 
 We want to predict the probability of survival after transplantation, given known covariates that can be measured before transplantation. 
 
@@ -300,8 +300,8 @@ roc_logit <- roc(cases_comp$survival_status, mod.result$fitted.values)
 ggroc(list("Logistic" = roc_logit)) +
   theme(legend.title = element_blank()) +
   geom_segment(aes(x = 1, xend = 0, y = 0, yend = 1), color = "black", linetype = "dashed") +
-  xlab("Sensitivity") +
-  ylab("Specificity") +
+  xlab("Specificity") +
+  ylab("Sensitivity") +
   ggtitle("ROC Curve")
 
 auc(roc_logit) # Want this to be >0.7
@@ -338,6 +338,29 @@ confusionMatrix(data = as.factor(predictions),
 
 ```
 
+# Secondary Analysis
+
+We can also look at some secondary analyses. We read a journal article that found that patients who received peripheral stem cell transplants were more likely to develop graft-versus-host disease (GVHD). We can easily check to see if this holds true in our data.
+
+```{r}
+# more people who received peripheral stem cells survived, meaning that they were
+# more likely to have time to develop GVHD
+table(bone$survival_status, bone$stem_cell_source) %>%
+  prop.table(margin = 2)
+
+# proportion with GVHD
+table(bone$acute_GvHD_II_III_IV, bone$stem_cell_source) %>%
+  prop.table(margin = 2)
+
+# what if we only look at people who survived?
+survived <- filter(bone, survival_status == 0)
+table(survived$acute_GvHD_II_III_IV, survived$stem_cell_source) %>%
+  prop.table(margin = 2)
+# note: there are only a few people included in this table
+
+# could try to model GVHD based on stem cell source, adjusted for potential confounders
+
+```
 
 
 
