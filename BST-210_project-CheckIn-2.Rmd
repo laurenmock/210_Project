@@ -416,8 +416,8 @@ table(GvHD = survived$acute_GvHD_II_III_IV,transplant =  survived$stem_cell_sour
 
 Another Secondary Analysis we looked at was the possible prediction and association of CD34 dosage and CD3 dosage on survival outcome. 
 
-*Include a little research on the reasoning behind dosage levels
-*I don't think we need to include additional research here!*
+(a)
+
 CD34+ = CD34+ cell dose per kg of recipient body weight (10^6/kg)
 CD3 = CD3+ cell dose per kg of recipient body weight (10^8/kg)
 
@@ -454,9 +454,12 @@ grid.arrange(p1, p2)
 ```
 
 
-With the square root transform we are able to see a little bit of a trend.Just based off of a first glance, it looks like there were more death outcomes with fewer dosages of CD3 and CD34+
+With the square root transform we are able to see a little bit of a trend. Just based off of a first glance, it looks like there were more death outcomes with fewer dosages of CD3 and CD34+
 
-Let's look at a model with the 2 different dosages as predictors. These variables are in per kg of the recipients body weight, so we do not have to account for recipient body weight in our model. But maybe we can look at age of the recipient and see if it's a necessary predictor to add.We can also explore the ratio variable of the two dosages.
+
+
+
+Let's look at a model with the 2 different dosages as predictors. These variables are in per kg of the recipients body weight, so we do not have to account for recipient body weight in our model. But maybe we can look at age of the recipient and see if it's a necessary predictor to add. We can also explore the ratio variable of the two dosages.
 
 ```{r}
 CD <- bone %>%
@@ -490,14 +493,17 @@ We get a slightly higher AIC value, and the p-values don't give us any indicatio
 Age acting as a confounder on CD34+ and CD3 via 10% rule
 ```{r}
 # CD34+
-(-0.009609 - -0.001904) / (-0.009609) # No confounding
+(-0.009609 - -0.001904) / (-0.009609) * 100 # Confounding
 
 #CD3
-(-0.120459 - -0.107012) / (-0.120459) # No confounding
+(-0.120459 - -0.107012) / (-0.120459) * 100 # Confounding
 ```
 
+We've definitely got some confounding here. Therefore we will keep the variable `recipient_age` in our model.
 
-Great no confounding, now let's quickly check for EMM for each doseage variable
+
+
+Now let's quickly check for EMM for each dosage variable
 ```{r}
 age.cd.mod.emm1 <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1e8_per_kg + recipient_age + recipient_age*CD34_x1e6_per_kg...CD34kgx10d6, 
                        data = CD,
@@ -515,11 +521,10 @@ summary(age.cd.mod.emm2)
 
 Great, no significant interaction terms, so no effect measure modification.
 
-So let's just stick with our original model, but first let's quickly look at a model with only the dosage ratio.
-
+Before we stick with our original model including recipient age, but first let's quickly look at a model with only the dosage ratio.
 
 ```{r}
-dose.ratio.mod <- glm(survival_status ~ CD3_to_CD34_ratio,
+dose.ratio.mod <- glm(survival_status ~ CD3_to_CD34_ratio + recipient_age,
                       data = CD,
                       family = binomial())
 
@@ -530,39 +535,39 @@ Not a  significant p-value and much a higher AIC value compared to our simple mo
 
 Okay, now back to the original model
 ```{r}
-summary(simple.cd.mod)
+summary(age.cd.mod)
 ```
 
 
-The resulting $\hat{\beta_1}$ is the log Odds Ratio of death occurring in those with any level of CD34+ dose versus those with one unit less of CD34+, holding CD3 dosage constant. We then find the odds ratio by taking the exponential of B1 finding:$\hat{OR} = e^{\hat{\beta_1}} = e^{-0.009609} = 0.990437 $.
+The resulting $\hat{\beta_1}$ is the log Odds Ratio of death occurring in those with any dose of CD34+ /per kg of recipient body weight (10^8/kg) versus those with one CD34+ dose/per kg of recipient body weight (10^8/kg) less, holding CD3 dosage constant. We then find the odds ratio by taking the exponential of B1 finding:$\hat{OR} = e^{\hat{\beta_1}} = e^{-0.001904} = 0.9980978 $.
 
-Therefore, those with any level of CD34+ dose has 0.990437 times the odds of death compared to those with a CD34+ dose of one unit lower, on average, holding CD3 dosage constant, Which is not very significant of a value.
+Therefore, those with any level of CD34+ dose/per kg of recipient body weight (10^6/kg) has 0.990437 times the odds of death compared to those with one CD34+ dose/per kg of recipient body weight (10^6/kg) lower, on average, holding all other covariates constant, Which is not very significant of a value.
 
 
 What if we look at a 10 unit change in dosage?
 Looking at the effect of a 10-unit change of CD34+ dosage, we would have an odds ratio of:
 
-$\hat{OR} = e^{10\hat{\beta_1}} = e^{(10*-0.009609)} =  0.9083823 $
+$\hat{OR} = e^{10\hat{\beta_1}} = e^{(10*-0.001904)} =  0.9811401 $
 
-So for those with any level of CD34+ dose have 0.9083823 times the odds of death compared to those with with a CD34+ dosage of 10 units lower, on average, holding CD3 constant, still not a huge difference.
+So for those with any level of CD34+ dose have 0.9083823 times the odds of death compared to those with with a CD34+ dosage of 10 units lower, on average, holding CD3 constant, still not a huge significance, but we see a little more of a survival rate with an increased dosage of CD34+.
 
 ```{r}
+summary(CD$CD34_x1e6_per_kg...CD34kgx10d6) #CD34+ summary stats
 sd(CD$CD34_x1e6_per_kg...CD34kgx10d6)
+
+summary(CD$CD3_x1e8_per_kg) # CD3 summary stats
+sd(CD$CD3_x1e8_per_kg)
 ```
 
-----
-My brain is spacing, but need to look up again how to interpret CD3 in this model... is it just exp(B2)?
----
+Next let's look at the odds ratio of those with any level of CD3 dosage versus those with one unit less of CD3 dosage, on average, holding all other covariates constant.
 
+We then find the odds ratio by taking the exponential of B2 finding:$\hat{OR} = e^{\hat{\beta_2}} = e^{-0.107012} = 0.8985149 $.
 
-
-
-
+Therefore, those with any level of CD3 dose/per kg of recipient body weight (10^6/kg) has 0.8985149 times the odds of death compared to those with one CD3 dose/per kg of recipient body weight (10^6/kg) lower, on average, holding all other covariates constant. This is a little more significant of an assocation than the CD34+ which is good to see, especially since it lessens the odds of mortality. 
 
 
 Let's look at the association of survival outcome and each dosage alone
 ```{r, fig.width=6}
-
 p1 <- CD %>%
   ggplot(aes(x = as.factor(survival_status), y = CD34_x1e6_per_kg...CD34kgx10d6, color = survival_status)) +
   geom_boxplot() +
@@ -587,47 +592,9 @@ grid.arrange(p1,p2, nrow = 1)
 There is definitely an association with each dosage and survival outcome.
 
 
-
-
 ---
-Have some questions on this: what should we do here??
-```{r}
-# Mean of 5.38 which means that most times CD3 > CD34+
-summary(CD$CD3_to_CD34_ratio)
 
-
-# CD3 is in units of 10^6 while CD34+ is in units of 10^8... do we need to make them the same in order for analysis?
-CD_new <- CD %>% 
-  mutate(CD34 = CD34_x1e6_per_kg...CD34kgx10d6) %>%
-  mutate(CD3 = CD3_x1e8_per_kg / 100) %>%
-  mutate(CD3.to.CD34.newratio = CD3 / CD34)
-
-head(CD_new)
-
-```
-
-
-
-
-Looking at models with each of the dosages as its own predictor
-```{r}
-CD34.mod <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6,
-                data = CD,
-                family = binomial())
-summary(CD34.mod)
-
-
-CD3.mod <- glm(survival_status ~ CD3_x1e8_per_kg,
-                data = CD,
-                family = binomial())
-summary(CD3.mod)
-```
-
-The CD3 variable is much more significant by p-value in its own model than the CD34+ variable. 
-
-
-
----
+(b)
 Next looking at predicting survival outcome based on CD34+ and CD3 dosages:
 
 We saw before we may be able to come up with a decent predictive model of survival based on CD3 and CD34+ dosage since we could see a slight association in this graph:
@@ -646,17 +613,21 @@ bone %>%
 Let's try out some various predictive models to see if there's one that predictors death better than others.
 ```{r}
 # Model with both dosages
-# simple.cd.mod
+# model with age
 
-prediction <- ifelse(simple.cd.mod$fitted.values > 0.5, 1, 0) 
+prediction <- ifelse(age.cd.mod$fitted.values > 0.5, 1, 0) 
 confusionMatrix(data = as.factor(prediction), 
                 reference = as.factor(CD$survival_status),
                 positive = "1")
 
 
 
-# CD3 only model
+# CD3 only model (with age)
 # CD3.mod
+
+CD3.mod <- glm(survival_status ~ CD3_x1e8_per_kg + recipient_age,
+                data = CD,
+                family = binomial())
 
 prediction2 <- ifelse(CD3.mod$fitted.values > 0.5, 1, 0) 
 confusionMatrix(data = as.factor(prediction2), 
@@ -664,8 +635,12 @@ confusionMatrix(data = as.factor(prediction2),
                 positive = "1")
 
 
-# CD34+ only model
+# CD34+ only model (with age)
 # CD34.mod 
+
+CD34.mod <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6 + recipient_age,
+                data = CD,
+                family = binomial())
 
 prediction3 <- ifelse(CD34.mod$fitted.values > 0.5, 1, 0) 
 confusionMatrix(data = as.factor(prediction3), 
@@ -684,6 +659,27 @@ confusionMatrix(data = as.factor(prediction4),
 
 
 ```
+
+Since our model cares mostly about deaths, we are willing to sacrifice some accuracy percentage points to increase the sensitivity so that our model can correctly predict more deaths. Therefore, the best predictive model of the 4 models is the model with CD3 dosage and recipient age. 
+
+This model had an accuracy 59.34% and the highest sensitivity out of the four models of 45.68% and a specificity of 70.30%. So while it correctly predicts survivals decently well, it is still not doing the best job at predicting deaths. 
+
+
+Let's assess our specificity through an ROC and the area under the curve
+```{r}
+roc_logitCD3 <- roc(CD$survival_status, CD3.mod$fitted.values)
+
+ggroc(list("Logistic" = roc_logitCD3), legacy.axes = T) +
+  theme(legend.title = element_blank()) +
+  geom_abline(color = "black", linetype = "dashed", alpha = 0.5) +
+  xlab("1- Specificity") +
+  ylab("Sensitivity") +
+  ggtitle("ROC Curve for CD3 Dosage")
+
+auc(roc_logitCD3) # Want this to be >0.7
+```
+
+Our ROC is not ideal, and our AUC is on the lower side
 
 
 
