@@ -39,7 +39,7 @@ bone[,bone_num] <- lapply(bone_num, function(x) as.numeric(bone[[x]]))
 ```
 
 
-# Logistic regression to predict survival
+### Logistic regression to predict survival
 
 We want to predict the probability of survival after transplantation, given known covariates that can be measured before transplantation. 
 
@@ -65,7 +65,7 @@ head(p_hats)
 ```
 
 
-## Variables related to the donor
+#### Variables related to the donor
 
 ```{r}
 # variables related to the donor
@@ -92,7 +92,7 @@ confusionMatrix(data = as.factor(prediction),
  
 
 
-## Variables related to the recipient
+#### Variables related to the recipient
 
 Here we have to deal with the issue of having missing values for the variable recipient_body_mass.
 We elect to remove the variables here since only two values are missing and a sample of 185 should be sufficient. 
@@ -140,7 +140,7 @@ confusionMatrix(data = as.factor(prediction),
 
 
 
-## Variables related to the closeness of the match
+#### Variables related to the closeness of the match
 
 Per our medical expert, not specifically domain expert, the suggestion is to not include HLA Match AND antigen/allele. In this case we will choose to only choose the variable HLA Match out of 10. 
 
@@ -170,7 +170,7 @@ confusionMatrix(data = as.factor(prediction),
 ```
 
 
-## Variables related to stem cell source
+#### Variables related to stem cell source
 
 Again, we are seeing that are model is not doing to well in terms of accuracy of prediction. However, the model for stem cell source is doing well in terms of sensitivity, unfortunately this is offset by its specificity. 
 
@@ -391,7 +391,7 @@ confusionMatrix(data = as.factor(mypred_knn), reference = as.factor(cases_comp2$
 
 
 
-# Secondary Analysis
+### Secondary Analysis
 
 We can also look at some secondary analyses. We read a journal article that found that patients who received peripheral stem cell transplants were more likely to develop graft-versus-host disease (GVHD). We can easily check to see if this holds true in our data.
 
@@ -428,6 +428,10 @@ Another Secondary Analysis we looked at was the possible prediction and associat
 *Include a little research on the reasoning behind dosage levels
 CD34+ = CD34+ cell dose per kg of recipient body weight (10^6/kg)
 CD3 = CD3+ cell dose per kg of recipient body weight (10^8/kg)
+
+Previous research indicated that "Multivariate analysis has shown that both infused CD34(+) cell dose <10 x 10(6)/kg and CD3(+) cell dose <4 x 10(8)/kg were independent risk factors for mortality (relative risk [RR] 1.8 and 1.71, P = .009 and .016, respectively)."
+
+We will look further into the matter to try to find the logistic regression model used to fit the model above (if logisitc regression was used considering the output states "RR" not "OR" as expected in logistic regression).
 
 
 Let's first look at a graph with the 2 different dosages and their effect on survival outcome
@@ -517,7 +521,7 @@ age.cd.mod.emm2 <- glm(survival_status ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1
 summary(age.cd.mod.emm2)
 ```
 
-Great, so significant interaction terms, so no effect measure modification.
+Great, no significant interaction terms, so no effect measure modification.
 
 So let's just stick with our original model, but first let's quickly look at a model with only the dosage ratio.
 
@@ -529,7 +533,7 @@ dose.ratio.mod <- glm(survival_status ~ CD3_to_CD34_ratio,
 
 summary(dose.ratio.mod)
 ```
-Not a very significant p-value and much a higher AIC value compared to our simple model.
+Not a  significant p-value and much a higher AIC value compared to our simple model.
 
 
 Okay, now back to the original model
@@ -647,7 +651,7 @@ bone %>%
 ```
 
 
-Let's try out some various predictive models to see if there's one that predictos death better than others.
+Let's try out some various predictive models to see if there's one that predictors death better than others.
 ```{r}
 # Model with both dosages
 # simple.cd.mod
@@ -690,3 +694,81 @@ confusionMatrix(data = as.factor(prediction4),
 ```
 
 
+
+
+### Linear Regression
+
+In a turn of events, we did find that it may in fact be useful for us to explore a linear relationship of our variables: CD3 and CD34, which are different types of white blood cells from transplantation. 
+
+We were curious, as novices to the field, if there are any variables pre surgery that may determine this amount? We may hypothesize that the weight/age of a recipient may be influential in this decision. So while the regression may not be the most useful, it is nonetheless of only real option for linear regression given our dataset. 
+
+The following variables include metrics from the recipient, the donor and the match. 
+
+When we run the linear regression with CD3 as the outcome variable, we see that at the alpha 0.05 level only the variables recipient body mass and stem cell peripheral blood are statistically significant; as such we reject the null and suggest that there is an association between these variables and CD3. We will have to further explore the relationship of CD3 and  peripheral blood as the stem cell source, as perhaps this is a known byproduct of this type of transplant. 
+
+
+When we run the linear regression with CD34 as the outcome variable, we see that at the alpha 0.05 level, many other variables are statistically significant at the 0.05 alpha level; and thus, conclude that they are associated with CD34 dosage. These variables include body mass and age, which we hypothesized to be associated due to the nature of transplantation, and the variables related to cmv status and stem cell source as peripheral blood. 
+
+```{r}
+# dataset for cd3
+cd3_comp <- bone %>% 
+  select(c(recipient_age, recipient_gender, recipient_body_mass,
+           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status, stem_cell_source, CD3_x1e8_per_kg)) %>%
+  drop_na()
+
+# dataset for cd34
+cd34_comp <- bone %>% 
+  select(c(recipient_age, recipient_gender, recipient_body_mass,
+           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status, stem_cell_source, CD34_x1e6_per_kg...CD34kgx10d6
+)) %>%
+  drop_na()
+
+# cd3 model
+cd3_lin <- lm(CD3_x1e8_per_kg ~ ., data = cd3_comp)
+summary(cd3_lin)
+
+# cd34
+cd34_lin <- lm(CD34_x1e6_per_kg...CD34kgx10d6 ~ ., data = cd34_comp)
+summary(cd34_lin)
+```
+
+Next, we can perform forward and backward stepwise selection to help us assess which variables to include in the model. 
+When you use our forward selection process we see that we are left with many variables, so this process is not entirely helpful in narrowing down our predictors.  
+```{r}
+stepModel2 <- step(cd3_lin, direction="forward",
+                  scope=( ~.),
+                  data=cd3_comp)
+
+tidy(stepModel2)
+```
+
+We can compare this to backward selection. In backwards selection we are left with the variables: recipient blood type, cmv status, recipient body mass, and stem cell source. 
+
+```{r}
+backStepModel2 <- step(cd3_lin, 
+                      direction = "backward",
+                      data = cd3_comp)
+tidy(backStepModel2)
+
+```
+
+We repeat this process with the variable cd34 dosage. We again see that backwards selection helps us reduce our model further, which is expected as backwards selection is generally more strict. The variables retained are: donor age, cmv status, gender match,recipient blood type, recipient cmv, stem cell source, and recipient body mass. 
+
+
+```{r}
+stepModel34 <- step(cd34_lin, direction="forward",
+                  scope=( ~.),
+                  data=cd34_comp)
+
+tidy(stepModel34)
+
+
+backStepModel34 <- step(cd34_lin, 
+                      direction = "backward",
+                      data = cd34_comp)
+tidy(backStepModel34)
+```
+
+We can use lasso regression. 
+
+Afterwards, we can use visualizations to help explain these findings. 
