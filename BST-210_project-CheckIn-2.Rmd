@@ -39,11 +39,9 @@ bone[,bone_num] <- lapply(bone_num, function(x) as.numeric(bone[[x]]))
 ```
 
 
-### Logistic regression to predict survival
+## Logistic regression to predict survival
 
 We want to predict the probability of survival after transplantation, given known covariates that can be measured before transplantation. 
-
-*question: what determines dosage amount? so should we include this as a predictor or not?*
 
 ```{r}
 # remove variables that are measured after transplantation
@@ -54,15 +52,10 @@ mod_all_vars <- glm(survival_status ~ ., family = binomial(), data = predictors)
 summary(mod_all_vars)
 
 p_hats <- mod_all_vars$fitted.values
-head(p_hats)
-
-
-
-# only predicts 2 values, not sure why...
-
-# regardless, we will definitely need to select some variables that make sense
+head(p_hats, 20)
 
 ```
+This model is nearly fully saturated, so it knows whether each child survived or died with almost complete certainty. We will need to eliminate some of these covariates in order for our model to be useful.
 
 
 #### Variables related to the donor
@@ -75,7 +68,7 @@ mod_donor <- glm(survival_status ~ donor_age + donor_age_below_35 + donor_ABO + 
 head(mod_donor$fitted.values)
 ```
 
-We can then decide to remove the variable for donor_age_below_35 because of multicolineary. Including this variable will not allow us to properly "hold other variables constant" since the variable age modifies this variable of age_below_35. 
+We can then decide to remove the variable for donor_age_below_35 because of multicollinearity. Including this variable will not allow us to properly "hold other variables constant" since the variable age modifies this variable of age_below_35. 
 
 We see here that our predictors are pretty bad, even on a testing only dataset.
 
