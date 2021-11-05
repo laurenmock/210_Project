@@ -414,11 +414,10 @@ table(GvHD = survived$acute_GvHD_II_III_IV,transplant =  survived$stem_cell_sour
 ```
 
 
-
-
 Another Secondary Analysis we looked at was the possible prediction and association of CD34 dosage and CD3 dosage on survival outcome. 
 
 *Include a little research on the reasoning behind dosage levels
+*I don't think we need to include additional research here!*
 CD34+ = CD34+ cell dose per kg of recipient body weight (10^6/kg)
 CD3 = CD3+ cell dose per kg of recipient body weight (10^8/kg)
 
