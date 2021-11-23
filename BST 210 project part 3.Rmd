@@ -1,0 +1,362 @@
+---
+title: "Part 3"
+author: "Daniel Herrera"
+date: "11/23/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(e1071)
+library(randomForest)
+
+
+bone <- read.csv("data.csv")
+
+# remove HLA_match_raw (was already converted into a different column)
+bone <- select(bone, -HLA_match_raw)
+
+
+# convert numeric columns to numeric
+bone_num <- c("donor_age", "recipient_age", "recipient_body_mass", "CD34_x1e6_per_kg...CD34kgx10d6",
+           "CD3_x1e8_per_kg", "CD3_to_CD34_ratio", "ANC_recovery", "PLT_recovery",
+           "time_to_acute_GvHD_III_IV", "survival_time", "survival_status")
+
+bone[,bone_num] <- lapply(bone_num, function(x) as.numeric(bone[[x]]))
+```
+
+We will begin by exploring our missing data for CMV status. This variable is deemed important by our domain experts so we need to explore why there appears to be missingness to decide on the most reasonable steps to handle this missingness. 
+
+```{r}
+bone %>%  
+  group_by(CMV_status) %>% 
+  tally()
+```
+
+There are 16 individuals which have missing values for cmv_status. 
+
+We will firt explore the outcomes of the individuals with missing values. 
+
+```{r}
+bone %>%
+  group_by(CMV_status) %>% 
+  summarize( n = n(), survivers = sum(survival_status), deceased = n - survivers, percent_surv = survivers/n)
+```
+
+We do see that those who had cmv_status missing had higher percent of survival comparatively, with 62.5% surviving while the next highest cmv_status group was 46.15%.
+
+
+We can try to explore other variables that may be useful when trying to understand if this difference is meaningful.  
+
+It appears, roughly, that there is some overlap in the percentage of the total that are receive bone marrow as the stem cell source among the missing compared to other groups. Additionally, there appears to be overlap in the missing values compared to other cmv_status levels with respect to recipient body mass. Lastly, there also appears to roughly be a similar proportion of males/females in the missing cmv status group compared to other levels. 
+
+
+```{r}
+# cmv_satus and stem cell source
+bone %>%
+  group_by(CMV_status) %>% 
+  summarize( n = n(), `peripheral blood` = sum(stem_cell_source == "peripheral_blood"), `bone marrow` = sum(stem_cell_source == "bone_marrow"), bm_proportion = `bone marrow`/n)
+
+
+
+# cmv_status and recipient body mass
+
+ggplot(data = bone, aes(x = as.factor(CMV_status), y = recipient_body_mass)) + 
+  geom_boxplot() +
+  xlab(" CMV Status") + 
+  ylab("Recipient Body Mass") + 
+  theme_classic()
+
+# cmv and gender
+bone %>%
+  group_by(CMV_status) %>% 
+  summarize( n = n(), `male recipient` = sum(recipient_gender == "male"), `female recipient` = sum(recipient_gender == "female"), `male proportion` = `male recipient` / n)
+
+
+
+```
+
+
+
+#### Naive approach
+
+We will perform several supervised learning techniques using a training and testing split of the complete cases to try to predict survival status effectively.
+
+Note: There are 5 missing cd3 values. This is an important variable so we may have to address this further. For now we will drop these 5 values as well; however, we will try to impute them later using the MICE package. 
+
+
+```{r}
+
+# attempt at a similar "full model"
+
+predictors <- bone[,c(1:27,37)] # selects only predictors and survival (the outcome)
+
+# make NA the ones with missing CMV status
+predictors_CMV <- predictors %>% 
+  mutate(CMV_status = na_if(CMV_status, "?"))
+
+
+#find complete cases only
+comp_cases_CMV <- predictors_CMV %>% 
+  drop_na()
+
+# use only variables which are not redundant and avoid possibility of multicolinearity
+comp_cases_CMV <- comp_cases_CMV %>% 
+  select(c(survival_status, recipient_age, recipient_gender, recipient_body_mass,
+           recipient_ABO, recipient_rh, recipient_CMV, donor_age, stem_cell_source, disease, gender_match, ABO_match, CMV_status,stem_cell_source, CD34_x1e6_per_kg...CD34kgx10d6, CD3_x1e8_per_kg))
+         
+
+# Create test/train data
+set.seed(1)
+# split test and training data into 50/50
+trainIndex <- createDataPartition(comp_cases_CMV$survival_status, p = .7, 
+                                  list = FALSE, 
+                                  times = 1)
+train_set <- comp_cases_CMV[ trainIndex,]
+test_set <- comp_cases_CMV[-trainIndex,]
+```
+
+Now we can try to recreate our previous approach to modeling using a training/testing split to assess generalizability of our data. All using n = 171. Here we still have some missing values for cd3, which we will need to address later.
+
+We have parsed out some variables due to concerns of collinearity due to variables measuring the same or similar metrics. We remove variables included in recipient and donor that can be summarized by '..._match" variables to remove this redundancy.
+
+Our model here has an accuracy of 61.22%.
+
+
+```{r}
+# attempt at a similar "full model"
+
+logistic_full <- glm(survival_status ~ .,
+    family = binomial(), data = train_set)
+
+summary(logistic_full)
+
+# create predictions and calc accuracy
+
+
+glm_probs <- predict(logistic_full, newdata = test_set, type = "response")
+glm_preds <- ifelse(glm_probs > 0.5, 1, 0)
+
+confusionMatrix(data = as.factor(glm_preds), 
+                reference = as.factor(test_set$survival_status),
+                positive = "1")
+
+```
+
+
+Let's try using step selection to see which variables may be more important to include in our supervised learning models.
+
+Forward step and backwards step selection determine that CD3 dosage, recipient RH status, disease type and recipient body mass are most important. We will keep cmv_status as important due to our domain knowledge experts. 
+
+```{r}
+library(broom)
+
+
+mod_basic <- glm(survival_status ~ 1, data=comp_cases_CMV, family = "binomial")
+stepModel <- step(mod_basic, direction="forward",
+                  scope=(~recipient_age+ recipient_gender+ recipient_body_mass+
+           recipient_ABO+ recipient_rh+ recipient_CMV+ donor_age+ stem_cell_source+ disease+ gender_match+ ABO_match+ CMV_status+stem_cell_source+ CD34_x1e6_per_kg...CD34kgx10d6+ CD3_x1e8_per_kg),
+                  data=comp_cases_CMV)
+
+tidy(stepModel)
+
+```
+
+
+```{r}
+mod_back <- glm(survival_status ~ recipient_age + recipient_gender+ recipient_body_mass+
+           recipient_ABO+ recipient_rh+ recipient_CMV+ donor_age+ stem_cell_source+ disease+ gender_match+ ABO_match+ CMV_status+stem_cell_source+ CD34_x1e6_per_kg...CD34kgx10d6+ CD3_x1e8_per_kg, 
+                data = comp_cases_CMV, 
+                family = "binomial")
+
+backStepModel <- step(mod_back, 
+                      direction = "backward",
+                      data = comp_cases_CMV)
+
+tidy(backStepModel)
+```
+
+
+
+
+
+
+We can now try this approach using only the model variables determined as important by forward and backwards step selection. We get an accuracy of 63.27% using this approach, which is slightly higher than our initial full model. 
+
+```{r}
+mod_log <- glm(survival_status ~ stem_cell_source + recipient_body_mass + as.factor(recipient_rh) + disease + CD3_x1e8_per_kg,
+               data = train_set,
+               family = binomial())
+summary(mod_log)
+
+
+
+glm_probs <- predict(mod_log, newdata = test_set, type = "response")
+glm_preds <- ifelse(glm_probs > 0.5, 1, 0)
+
+confusionMatrix(data = as.factor(glm_preds), 
+                reference = as.factor(test_set$survival_status),
+                positive = "1")
+```
+
+
+
+
+
+
+###### KNN
+
+Now we can try this approach of full and reduced models using k-nearest neighbors, bayes, decision trees and random forests. We will have to drop one value which is missing, denoted as '?' from the recipient RH variable. 
+
+With the full model we have an accuracy of 55.1%, meanwhile with the reduced model we have an accuracy of 65.31%
+
+```{r}
+# full model
+
+train_knn <- train_set[-which(train_set$recipient_rh == "?"),]
+
+knn_full <- knn3(survival_status ~., data = train_knn)
+
+knn_probs <- predict(knn_full, newdata = test_set)[,2]
+knn_preds <- ifelse(knn_probs > 0.5, 1, 0)
+
+confusionMatrix(data = as.factor(knn_preds), 
+                reference = as.factor(test_set$survival_status),
+                positive = "1")
+```
+```{r}
+#reduced model
+# remove one ? value row for rh
+train_knn <- train_set[-which(train_set$recipient_rh == "?"),]
+
+
+knn_red <- knn3(survival_status ~ stem_cell_source + recipient_body_mass + as.factor(recipient_rh) + disease + CD3_x1e8_per_kg, data = train_knn)
+
+knn_probs <- predict(knn_red, newdata = test_set)[,2]
+knn_preds <- ifelse(knn_probs > 0.5, 1, 0)
+
+confusionMatrix(data = as.factor(knn_preds), 
+                reference = as.factor(test_set$survival_status),
+                positive = "1")
+```
+
+
+
+###### Naive Bayes
+
+With the reduced model, we obtain an accuracy of 61.22% using the Niave Bayes approach compared to 57.14% with the ful model. 
+
+
+```{r}
+# full model
+nb_full <- naiveBayes(survival_status ~ ., data = train_set)
+nb_preds <- predict(nb_full, newdata = test_set)
+
+
+confusionMatrix(data = as.factor(nb_preds), 
+                reference = as.factor(test_set$survival_status),
+                positive = "1")
+
+```
+
+```{r}
+# reduced model
+nb_red <- naiveBayes(survival_status ~ stem_cell_source + recipient_body_mass + as.factor(recipient_rh) + disease + CD3_x1e8_per_kg, data = train_set)
+nb_preds <- predict(nb_red, newdata = test_set)
+
+
+confusionMatrix(data = as.factor(nb_preds), 
+                reference = as.factor(test_set$survival_status),
+                positive = "1")
+
+```
+
+
+###### Decision Tree
+
+We will now use decision trees to make predictions of survival status. 
+
+With our full model, the accuracy of the decision trees is 61.22%, meanwhile our reduced model has an accuracy of 59.18%.
+
+```{r}
+# full
+fit <- rpart(as.factor(survival_status) ~ ., data = train_set)
+
+# will plot the tree 
+rpart.plot(fit, cex = 0.5)
+
+# create new dataframe without survival outcomes
+# df <- subset(cases_comp2, select = -c(survival_status))
+
+#make predicitons and cutoffs
+mypreds <- predict(fit, test_set)
+tree_preds <- ifelse(mypreds[,2] > 0.5, 1, 0)
+
+
+confusionMatrix(data = as.factor(tree_preds), 
+                reference = as.factor(test_set$survival_status),
+                positive = "1")
+```
+
+```{r}
+fit <- rpart(as.factor(survival_status) ~ stem_cell_source + recipient_body_mass + as.factor(recipient_rh) + disease + CD3_x1e8_per_kg, data = train_set)
+
+# will plot the tree 
+rpart.plot(fit, cex = 0.5)
+
+# create new dataframe without survival outcomes
+# df <- subset(cases_comp2, select = -c(survival_status))
+
+#make predicitons and cutoffs
+mypreds <- predict(fit, test_set)
+tree_preds <- ifelse(mypreds[,2] > 0.5, 1, 0)
+
+
+confusionMatrix(data = as.factor(tree_preds), 
+                reference = as.factor(test_set$survival_status),
+                positive = "1")
+```
+
+
+###### Random Forests
+
+We will use the same training data as the knn which removes the one rh = "?" value. 
+
+Very surprisingly, the random forest model has an accuracy of 59.18% when using the full data; meanwhile, the reduced model has an accuracy of 65.31 %. 
+
+```{r}
+#full model
+fit_bag <- randomForest(as.factor(survival_status) ~ ., ntree = 100, data = train_knn)
+
+forest_pred <- predict(fit, newdata = test_set, type = "class")
+confusionMatrix(table(pred = forest_pred, true = test_set$survival_status))
+```
+
+```{r}
+# reduced model 
+set.seed(1)
+red_bag <- randomForest(as.factor(survival_status) ~ stem_cell_source + recipient_body_mass + recipient_rh +  disease + CD3_x1e8_per_kg, ntree = 100, data = train_knn)
+
+forest_pred <- predict(red_bag, newdata = test_set, type = "class")
+confusionMatrix(table(pred = forest_pred, true = test_set$survival_status))
+```
+
+
+**In summary, the highest accuracy was attained using the model for **
+
+
+
+
+# Redo using reduced and with Imputation
+
+
+
+
+
+
+
+
+
