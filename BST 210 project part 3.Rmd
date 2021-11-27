@@ -41,7 +41,7 @@ bone %>%
 
 There are 16 individuals which have missing values for cmv_status. 
 
-We will firt explore the outcomes of the individuals with missing values. 
+We will first explore the outcomes of the individuals with missing values. 
 
 ```{r}
 bone %>%
@@ -251,7 +251,7 @@ confusionMatrix(data = as.factor(knn_preds_red),
 
 ###### Naive Bayes
 
-With the reduced model, we obtain an accuracy of 61.22% using the Niave Bayes approach compared to 57.14% with the ful model. 
+With the reduced model, we obtain an accuracy of 61.22% using the Naive Bayes approach compared to 57.14% with the full model. 
 
 
 ```{r}
@@ -358,6 +358,7 @@ confusionMatrix(table(pred = forest_pred_red, true = test_set$survival_status), 
 We create ROC Curves using our Naive approach where imputation for missing CMV status is not conducted. 
 
 ```{r}
+library(pROC)
 
 # knn reduced model 
 roc_knn <- roc(test_set$survival_status, knn_preds_red)
@@ -367,12 +368,11 @@ roc_rf <- roc(test_set$survival_status, as.numeric(levels(forest_pred_red))[fore
 
 
 ggroc(list("K-Nearest Neighbors" = roc_knn, "Random Forest" = roc_rf), legacy.axes = T, size = 1.5, alpha = 0.8) +
-  theme(legend.title = element_blank()) +
   geom_abline(color = "black", linetype = "dashed", alpha = 0.5) +
   xlab("1- Specificity") +
   ylab("Sensitivity") +
   ggtitle("ROC Curves for Best Models (Naive Approach)") + 
-  # add better legend title, guide?
+  labs(color = "Models")  +
   theme_bw()
 
 auc(roc_knn)
@@ -385,7 +385,7 @@ auc(roc_rf)
 
 # Redo using reduced and with Imputation 
 
-We will use the predictors dataset, before we removed missing values, and recode "?" to be NA. Then we can use use imputation to get values for CMV_status.
+We will use the predictors data set, before we removed missing values, and recode "?" to be NA. Then we can use use imputation to get values for CMV_status.
 
 ```{r}
 predictors_CMV <- predictors %>% 
@@ -504,7 +504,7 @@ confusionMatrix(data = as.factor(knn_preds_red3),
                 positive = "1")
 ```
 
-In summary, after imputation, the accuracy of our KNN reduced model and our Random Forest reduced model are lwoer than when using the naive approach. 
+In summary, after imputation, the accuracy of our KNN reduced model and our Random Forest reduced model are lower than when using the naive approach. 
 
 ##### Roc Curves after Imputation
 
@@ -517,12 +517,11 @@ roc_rf_imp <- roc(test_set2$survival_status, as.numeric(levels(forest_pred_red2)
 
 
 ggroc(list("K-Nearest Neighbors" = roc_knn_imp, "Random Forest" = roc_rf_imp), legacy.axes = T, size = 2, alpha = 0.8) +
-  theme(legend.title = element_blank()) +
   geom_abline(color = "black", linetype = "dashed", alpha = 0.5) +
   xlab("1- Specificity") +
   ylab("Sensitivity") +
   ggtitle("ROC Curves for Best Models (Imputation)") + 
-  # add better legend title, guide?
+  labs(color = "Models")  +
   theme_bw()
 
 auc(roc_knn_imp)
@@ -543,7 +542,7 @@ Firstly we know that we have a categorical value survival_status (dead = 1, aliv
 
 We can fit the model and see the summary below. We see that the predictor CD3 dosage is significant, when both predictor variables are included. CD34 dosage is significant when only CD34 dosage is included. These finding align with the research findings previously mentioned.
 
-The estimated hazard ratio for mortality associated with a one unit higher CD3 dose  compared to those with on unit lower is 0.91621 (95% CI: 0.845, 0.9934), holding all other covariates constant, which indicates on average a 8.4% decrease in mortality. When we explore only the model with CD34 as a predictor, the estimated hazard ratio for mortality associated with a one unit higher CD34 dose compared to those with one unit lower is 0.97131 (95% CI: 0.9454, 0.9979), which indicates on average a 2.9% decrease in mortality. Both of these findings indicate a protective effect against mortality when increasing the dosage of CD3 and CD34. 
+The estimated hazard ratio for mortality associated with a one unit higher CD3 dose compared to those with on unit lower is 0.91621 (95% CI: 0.845, 0.9934), holding all other covariates constant, which indicates on average a 8.4% decrease in mortality. When we explore only the model with CD34 as a predictor, the estimated hazard ratio for mortality associated with a one unit higher CD34 dose compared to those with one unit lower is 0.97131 (95% CI: 0.9454, 0.9979), which indicates on average a 2.9% decrease in mortality. Both of these findings indicate a protective effect against mortality when increasing the dosage of CD3 and CD34. 
 
 
 ```{r}
@@ -565,7 +564,7 @@ summary(cox_red)
 
 ```
 
-We can now assess if this model is appropriate for the data by analyzing the weighted Schoenfeld residuals. We do not utilize log-log plots here since these predictors are continuous variables, and thus not binary. The weighted Schoenfel dresiduals do not show any indication that the proportional hazards assumption does not hold in this case. 
+We can now assess if this model is appropriate for the data by analyzing the weighted Schoenfeld residuals. We do not utilize log-log plots here since these predictors are continuous variables, and thus not binary. The weighted Schoenfeld residuals do not show any indication that the proportional hazards assumption does not hold in this case. 
 
 
 ```{r}
