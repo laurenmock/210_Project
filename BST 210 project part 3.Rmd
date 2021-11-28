@@ -31,6 +31,7 @@ bone_num <- c("donor_age", "recipient_age", "recipient_body_mass", "CD34_x1e6_pe
 bone[,bone_num] <- lapply(bone_num, function(x) as.numeric(bone[[x]]))
 ```
 
+
 We will begin by exploring our missing data for CMV status. This variable is deemed important by our domain experts so we need to explore why there appears to be missingness to decide on the most reasonable steps to handle this missingness. 
 
 ```{r}
@@ -577,6 +578,92 @@ plot(wt_sch) # maybe see a pattern of decreaseing here over time
 wt_sch
 
 ```
+
+
+
+Let's undergo a new round of model selection to see which variables are seen as most important in our data set to predict survival time.
+
+
+We can try to use step selection here: 
+
+First we take out survival outcome and relapse
+
+
+```{r}
+bone2 <- bone %>% dplyr::select(-c(survival_status, relapse)) %>% drop_na()
+```
+
+
+
+The step model suggests the following predictors:
+gender_match, stem_cell_source, CD34, PLT_recovery, extensive_chronic_GvHD and HLA_mismatched. 
+
+With significant predictors being:
+gender_match, stem_cell_source and extensive_chronic_GvHD
+
+Adjusted R^2: 0.2826
+
+```{r}
+library(MASS)
+full_model <- lm(survival_time ~ ., data = bone2)
+
+# Stepwise regression model
+step_model <- stepAIC(full_model, 
+                    direction = "both", 
+                    trace = FALSE)
+summary(step_model)
+```
+
+
+
+Forward selection: Has all the predictors but the only significant predictors are:
+
+stem_cell_source and extensive_chronic_GvHD
+
+
+```{r}
+# forward regression model
+forward_model <- stepAIC(full_model, 
+                    direction = "forward", 
+                    trace = FALSE)
+summary(forward_model)
+```
+
+
+Next, we can try backwards selection:
+
+This models suggests to use the following predictors:
+gender_match, stem_cell_source, CD34, PLT_recovery, and extensive_chronic_GvHD
+
+With the following predictors being the most significant:
+gender_match, stem_cell_source, extensive_chronic_GvHD
+
+Adjusted R^2: 0.2709
+
+
+```{r}
+backward_model <- step(full_model, 
+                      direction = "backward",
+                      trace = FALSE)
+
+summary(backward_model)
+```
+
+
+
+
+Let's try a survival analysis with the variables from the backwards model since there are fewer variables and a higher adjusted R^2
+```{r}
+bone
+cox_obj <- Surv(bone$survival_time, bone$survival_status)
+cox_model <- coxph(cox_obj ~ as.factor(gender_match), as.factor(stem_cell_source), CD34_x1e6_per_kg...CD34kgx10d6, PLT_recovery, as.factor(extensive_chronic_GvHD), data = bone, ties = "exact")
+
+# provide score and LR test statistic
+summary(cox_model)
+
+```
+
+
 
 
 
