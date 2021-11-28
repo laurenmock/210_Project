@@ -580,4 +580,50 @@ wt_sch
 
 
 
+In one of our secondary questions, we ask if one of sources of bone marrow (either from peripheral stem cell or bone marrow stem cell) has a greater chance of survival than the other. We can use a survival analysis model to calculate the hazard rate with stem cell source being our variable. 
+
+
+
+The estimated hazard ratio for mortality for the stem cell source of peripheral blood compared to bone marrow is 0.6259, on average, (95% CI: 0.3899, 1.005) holding all other covariates constant, which indicates a 37.4% decrease in mortality. This finding indicates a positive effect against mortality when using peripheral blodd as a stem cell source rather than bone marrow. This fact also supports our exploratory graph below.
+
+```{r}
+cox_mod_source <- coxph(cox_obj ~ as.factor(stem_cell_source), data = bone, ties = "exact")
+
+# provide score and LR test statistic
+summary(cox_mod_source)
+```
+
+```{r}
+# create plot of schoenfeld resids
+wt_sch_source <- cox.zph(cox_mod_source)
+plot(wt_sch_source) # slight decrease then increase over time
+
+# check summary to see if problematic
+wt_sch_source
+```
+
+
+```{r}
+library(dplyr)
+library(pander)
+
+#stem_cell_source
+#2x2 table with margins
+tab20 <- table(bone$survival_status,bone$stem_cell_source)
+tab20 <- prop.table(tab20,2)
+addmargins(tab20)  %>% pander(caption = "Stem Cell Source")
+
+tab20 <- tab20 %>% data.frame()
+
+p20 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab20) + 
+  geom_col(position = "dodge") +
+  xlab("Stem Cell Suurce") +
+  ylab ("Density (%)") +
+  labs(fill='status') +
+  scale_fill_manual(values=c("#990000", "burlywood2"))+
+  theme(legend.position="top")
+
+p20
+```
+
 
