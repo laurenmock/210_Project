@@ -539,6 +539,8 @@ Firstly we know that we have a categorical value survival_status (dead = 1, aliv
 
 2) As well, we can include the variables suggested by lasso regression and domain knowledge to explore any meaningful associations. 
 
+3) We can look at other models for survival analysis by undergoing a new model selection and analyze those findings
+
 #### 1) Survival Analysis with CD3 and CD34 doses as predictors based on previous research.  
 
 We can fit the model and see the summary below. We see that the predictor CD3 dosage is significant, when both predictor variables are included. CD34 dosage is significant when only CD34 dosage is included. These finding align with the research findings previously mentioned.
@@ -580,19 +582,23 @@ wt_sch
 ```
 
 
+### 2) Include the variables suggested by lasso regression and domain knowledge to explore any meaningful associations (include potential counfounding)
+
+
+
+
+
+
+
+
+
+
+### 3) Other survival analysis models - undergoing a new model selection 
 
 Let's undergo a new round of model selection to see which variables are seen as most important in our data set to predict survival time.
 
 
 We can try to use step selection here: 
-
-First we take out survival outcome and relapse
-
-
-```{r}
-bone2 <- bone %>% dplyr::select(-c(survival_status, relapse)) %>% drop_na()
-```
-
 
 
 The step model suggests the following predictors:
@@ -601,31 +607,100 @@ gender_match, stem_cell_source, CD34, PLT_recovery, extensive_chronic_GvHD and H
 With significant predictors being:
 gender_match, stem_cell_source and extensive_chronic_GvHD
 
-Adjusted R^2: 0.2826
+Adjusted R^2: 0.2826 
 
 ```{r}
-library(MASS)
-full_model <- lm(survival_time ~ ., data = bone2)
+full_model <- lm(survival_time ~ 1, data = bone2)
 
 # Stepwise regression model
-step_model <- stepAIC(full_model, 
-                    direction = "both", 
-                    trace = FALSE)
+step_model <- step(full_model, 
+                    direction = "both",
+                    scope = (~ donor_age + 
+                               as.factor(donor_age_below_35) + 
+                               as.factor(donor_ABO) + 
+                               as.factor(donor_CMV) + 
+                               recipient_age + 
+                               as.factor(recipient_age_below_10) +
+                               as.factor(recipient_age_int) + 
+                               as.factor(recipient_gender) + 
+                               recipient_body_mass + 
+                               as.factor(recipient_ABO) + 
+                               as.factor(recipient_rh) + 
+                               as.factor(recipient_CMV) + 
+                               as.factor(disease) +
+                               as.factor(disease_group) + 
+                               as.factor(gender_match) + 
+                               as.factor(ABO_match) + 
+                               as.factor(CMV_status) + 
+                               as.factor(HLA_match..out.of.10.) +
+                               as.factor(HLA_mismatch) + 
+                               as.factor(antigen) + 
+                               as.factor(allele) + 
+                               as.factor(HLA_group_1) + 
+                               as.factor(risk_group) + 
+                               as.factor(stem_cell_source) + 
+                               as.factor(tx_post_relapse) + 
+                               CD34_x1e6_per_kg...CD34kgx10d6 + 
+                               CD3_x1e8_per_kg + 
+                               CD3_to_CD34_ratio + 
+                               ANC_recovery +
+                               PLT_recovery + 
+                               as.factor(acute_GvHD_II_III_IV) + 
+                               as.factor(acute_GvHD_III_IV) + 
+                               time_to_acute_GvHD_III_IV +
+                               as.factor(extensive_chronic_GvHD)),
+                    data = bone)
+                    
 summary(step_model)
 ```
 
 
 
-Forward selection: Has all the predictors but the only significant predictors are:
+Forward selection: 
 
-stem_cell_source and extensive_chronic_GvHD
+Produces the same model as above
 
 
 ```{r}
 # forward regression model
-forward_model <- stepAIC(full_model, 
-                    direction = "forward", 
-                    trace = FALSE)
+forward_model <- step(full_model, 
+                    direction = "forward",
+                    scope = (~ donor_age + 
+                               as.factor(donor_age_below_35) + 
+                               as.factor(donor_ABO) + 
+                               as.factor(donor_CMV) + 
+                               recipient_age + 
+                               as.factor(recipient_age_below_10) +
+                               as.factor(recipient_age_int) + 
+                               as.factor(recipient_gender) + 
+                               recipient_body_mass + 
+                               as.factor(recipient_ABO) + 
+                               as.factor(recipient_rh) + 
+                               as.factor(recipient_CMV) + 
+                               as.factor(disease) +
+                               as.factor(disease_group) + 
+                               as.factor(gender_match) + 
+                               as.factor(ABO_match) + 
+                               as.factor(CMV_status) + 
+                               as.factor(HLA_match..out.of.10.) +
+                               as.factor(HLA_mismatch) + 
+                               as.factor(antigen) + 
+                               as.factor(allele) + 
+                               as.factor(HLA_group_1) + 
+                               as.factor(risk_group) + 
+                               as.factor(stem_cell_source) + 
+                               as.factor(tx_post_relapse) + 
+                               CD34_x1e6_per_kg...CD34kgx10d6 + 
+                               CD3_x1e8_per_kg + 
+                               CD3_to_CD34_ratio + 
+                               ANC_recovery +
+                               PLT_recovery + 
+                               as.factor(acute_GvHD_II_III_IV) + 
+                               as.factor(acute_GvHD_III_IV) + 
+                               time_to_acute_GvHD_III_IV +
+                               as.factor(extensive_chronic_GvHD)),
+                    data = bone)
+                    
 summary(forward_model)
 ```
 
@@ -643,29 +718,126 @@ Adjusted R^2: 0.2709
 
 ```{r}
 backward_model <- step(full_model, 
-                      direction = "backward",
-                      trace = FALSE)
-
+                       direction = "backward",
+                       scope = (~ donor_age + 
+                               as.factor(donor_age_below_35) + 
+                               as.factor(donor_ABO) + 
+                               as.factor(donor_CMV) + 
+                               recipient_age + 
+                               as.factor(recipient_age_below_10) +
+                               as.factor(recipient_age_int) + 
+                               as.factor(recipient_gender) + 
+                               recipient_body_mass + 
+                               as.factor(recipient_ABO) + 
+                               as.factor(recipient_rh) + 
+                               as.factor(recipient_CMV) + 
+                               as.factor(disease) +
+                               as.factor(disease_group) + 
+                               as.factor(gender_match) + 
+                               as.factor(ABO_match) + 
+                               as.factor(CMV_status) + 
+                               as.factor(HLA_match..out.of.10.) +
+                               as.factor(HLA_mismatch) + 
+                               as.factor(antigen) + 
+                               as.factor(allele) + 
+                               as.factor(HLA_group_1) + 
+                               as.factor(risk_group) + 
+                               as.factor(stem_cell_source) + 
+                               as.factor(tx_post_relapse) + 
+                               CD34_x1e6_per_kg...CD34kgx10d6 + 
+                               CD3_x1e8_per_kg + 
+                               CD3_to_CD34_ratio + 
+                               ANC_recovery +
+                               PLT_recovery + 
+                               as.factor(acute_GvHD_II_III_IV) + 
+                               as.factor(acute_GvHD_III_IV) + 
+                               time_to_acute_GvHD_III_IV +
+                               as.factor(extensive_chronic_GvHD)),
+                    data = bone)
+                    
 summary(backward_model)
 ```
 
 
 
 
-Let's try a survival analysis with the variables from the backwards model since there are fewer variables and a higher adjusted R^2
+Let's try a survival analysis with the variables from the forward and step model since there are fewer variables and a higher adjusted R^2
 ```{r}
-bone
-cox_obj <- Surv(bone$survival_time, bone$survival_status)
-cox_model <- coxph(cox_obj ~ as.factor(gender_match), as.factor(stem_cell_source), CD34_x1e6_per_kg...CD34kgx10d6, PLT_recovery, as.factor(extensive_chronic_GvHD), data = bone, ties = "exact")
+obj <- Surv(bone$survival_time, bone$survival_status)
 
-# provide score and LR test statistic
-summary(cox_model)
+kap_meir <- survfit(obj ~ as.factor(gender_match) + 
+                  as.factor(stem_cell_source) + 
+                  CD34_x1e6_per_kg...CD34kgx10d6 +
+                  PLT_recovery + 
+                  as.factor(extensive_chronic_GvHD) + 
+                  as.factor(HLA_mismatch), 
+                data = bone)
+CI_log_log <- survfit(obj ~1, type = "kaplan-meier", conf.type = "log-log")
+
+plot(CI_log_log, xlab = "Days", ylab = "Survival Probability")
+abline(a = 0.75, b = 0, col = "red")
+abline(a = 0.50, b = 0, col = "green")
+abline(a = 0.25, b = 0, col = "purple")
+
+```
+
+
+Cox Proportional Hazards Model
+
+```{r}
+full_model <- coxph(obj ~ as.factor(gender_match) + 
+                  as.factor(stem_cell_source) + 
+                  CD34_x1e6_per_kg...CD34kgx10d6 +
+                  PLT_recovery + 
+                  as.factor(extensive_chronic_GvHD) + 
+                  as.factor(HLA_mismatch),
+               ties = "exact",
+               data = bone)
+
+summary(full_model)
+plot(survfit(full_model))
+abline(a = 0.75, b = 0, col = "red")
+abline(a = 0.50, b = 0, col = "green")
+abline(a = 0.25, b = 0, col = "purple")
+
+
+# Model with only significant p-values from model selection above
+
+red_model <- coxph(obj ~ as.factor(gender_match) + 
+                  as.factor(stem_cell_source) + 
+                  as.factor(extensive_chronic_GvHD), 
+               ties = "exact",
+               data = bone)
+
+summary(red_model)
+plot(survfit(red_model))
+abline(a = 0.75, b = 0, col = "red")
+abline(a = 0.50, b = 0, col = "green")
+abline(a = 0.25, b = 0, col = "purple")
+
+
+
+other_mod <- coxph(obj ~ as.factor(stem_cell_source) + 
+                     as.factor(extensive_chronic_GvHD) +
+                     PLT_recovery, 
+               ties = "exact",
+               data = bone)
+
+summary(other_mod)
+plot(survfit(other_mod))
+abline(a = 0.75, b = 0, col = "red")
+abline(a = 0.50, b = 0, col = "green")
+abline(a = 0.25, b = 0, col = "purple")
 
 ```
 
 
 
 
+
+
+
+## Secondary Question - Chances of survival for each source of bone marrow
 
 In one of our secondary questions, we ask if one of sources of bone marrow (either from peripheral stem cell or bone marrow stem cell) has a greater chance of survival than the other. We can use a survival analysis model to calculate the hazard rate with stem cell source being our variable. 
 
@@ -674,10 +846,11 @@ In one of our secondary questions, we ask if one of sources of bone marrow (eith
 The estimated hazard ratio for mortality for the stem cell source of peripheral blood compared to bone marrow is 0.6259, on average, (95% CI: 0.3899, 1.005) holding all other covariates constant, which indicates a 37.4% decrease in mortality. This finding indicates a positive effect against mortality when using peripheral blodd as a stem cell source rather than bone marrow. This fact also supports our exploratory graph below.
 
 ```{r}
-cox_mod_source <- coxph(cox_obj ~ as.factor(stem_cell_source), data = bone, ties = "exact")
+cox_mod_source <- coxph(obj ~ as.factor(stem_cell_source), data = bone, ties = "exact")
 
 # provide score and LR test statistic
 summary(cox_mod_source)
+plot(survfit(cox_mod_source))
 ```
 
 ```{r}
