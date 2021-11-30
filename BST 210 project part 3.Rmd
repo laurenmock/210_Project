@@ -531,9 +531,10 @@ auc(roc_rf_imp)
 
 
 
-#### Survival Analysis 
 
-Firstly we know that we have a categorical value survival_status (dead = 1, alive = 0), which tracks the status of survival for our patients. We also have a variable survival_time which tracks survival time, including time to death. We do not see any indication of censorship information being tracked, so we will make the assumption that no cases were censored. 
+# Survival Analysis 
+
+Firstly we know that we have a categorical value survival_status (dead = 1, alive = 0), which tracks the status of survival for our patients. We also have a variable survival_time which tracks time until death, or last date of follow-up for patients who were still alive at their last follow-up. 
 
 1) We can perform survival analysis with this as our outcome and try to replicate the findings of previous research with respect to important variables, 
 
@@ -560,7 +561,7 @@ The estimated hazard ratio for mortality associated with a one unit higher CD3 d
 
 
 ```{r}
-# compare cd34 and cd3 in survival model adjusting for age - b/c younger ages recieved more dosage (read that this was a possible confounder)
+# compare cd34 and cd3 in survival model adjusting for age - b/c younger ages received more dosage (read that this was a possible confounder)
 
 cox_obj <- Surv(bone$survival_time, bone$survival_status)
 cox_mod <- coxph(cox_obj ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1e8_per_kg + recipient_age_below_10, data = bone, ties = "exact")
@@ -595,7 +596,7 @@ wt_sch
 
 ### 2) Include the variables suggested by lasso regression and domain knowledge to explore any meaningful associations (include potential counfounding)
 
-
+I don't think we have used Lasso regression?
 
 
 
@@ -609,19 +610,34 @@ wt_sch
 Let's undergo a new round of model selection to see which variables are seen as most important in our data set to predict survival time.
 
 
+```{r}
+# first check to see how highly correlated our variables are
+bone_cc <- drop_na(bone)
+
+cor(bone_cc$CD3_x1e8_per_kg, bone_cc$CD34_x1e6_per_kg...CD34kgx10d6)
+```
+
+
+
+
 We can try to use step selection here: 
 
 
 The step model suggests the following predictors:
-gender_match, stem_cell_source, CD34, PLT_recovery, extensive_chronic_GvHD and HLA_mismatched. 
+gender_match, recipient_CMV, recipient_rh
 
 With significant predictors being:
-gender_match, stem_cell_source and extensive_chronic_GvHD
+recipient_CMV
 
 Adjusted R^2: 0.2826 
 
+**we can't use these post-transplant variables (PLT_recovery, GVHD)**
+
+**I don't think it makes sense to try to fit linear regression for model selection**
+
+
 ```{r}
-full_model <- lm(survival_time ~ 1, data = bone2)
+full_model <- lm(survival_time ~ 1, data = bone) # bone2?
 
 # Stepwise regression model
 step_model <- step(full_model, 
@@ -651,19 +667,12 @@ step_model <- step(full_model,
                                as.factor(risk_group) + 
                                as.factor(stem_cell_source) + 
                                as.factor(tx_post_relapse) + 
-                               CD34_x1e6_per_kg...CD34kgx10d6 + 
-                               CD3_x1e8_per_kg + 
-                               CD3_to_CD34_ratio + 
-                               ANC_recovery +
-                               PLT_recovery + 
-                               as.factor(acute_GvHD_II_III_IV) + 
-                               as.factor(acute_GvHD_III_IV) + 
-                               time_to_acute_GvHD_III_IV +
-                               as.factor(extensive_chronic_GvHD)),
+                               CD3_to_CD34_ratio),
                     data = bone)
                     
 summary(step_model)
 ```
+
 
 
 
@@ -681,7 +690,6 @@ forward_model <- step(full_model,
                                as.factor(donor_ABO) + 
                                as.factor(donor_CMV) + 
                                recipient_age + 
-                               as.factor(recipient_age_below_10) +
                                as.factor(recipient_age_int) + 
                                as.factor(recipient_gender) + 
                                recipient_body_mass + 
@@ -701,15 +709,7 @@ forward_model <- step(full_model,
                                as.factor(risk_group) + 
                                as.factor(stem_cell_source) + 
                                as.factor(tx_post_relapse) + 
-                               CD34_x1e6_per_kg...CD34kgx10d6 + 
-                               CD3_x1e8_per_kg + 
-                               CD3_to_CD34_ratio + 
-                               ANC_recovery +
-                               PLT_recovery + 
-                               as.factor(acute_GvHD_II_III_IV) + 
-                               as.factor(acute_GvHD_III_IV) + 
-                               time_to_acute_GvHD_III_IV +
-                               as.factor(extensive_chronic_GvHD)),
+                               CD3_to_CD34_ratio),
                     data = bone)
                     
 summary(forward_model)
@@ -735,7 +735,6 @@ backward_model <- step(full_model,
                                as.factor(donor_ABO) + 
                                as.factor(donor_CMV) + 
                                recipient_age + 
-                               as.factor(recipient_age_below_10) +
                                as.factor(recipient_age_int) + 
                                as.factor(recipient_gender) + 
                                recipient_body_mass + 
@@ -810,7 +809,7 @@ full_model <- coxph(obj ~ as.factor(gender_match) +
                data = bone)
 
 summary(full_model)
-plot(survfit(full_model))
+plot(survfit(full_model), xlim = c(0, 150))
 abline(a = 0.75, b = 0, col = "red")
 abline(a = 0.50, b = 0, col = "green")
 abline(a = 0.25, b = 0, col = "purple")
@@ -825,7 +824,7 @@ red_model <- coxph(obj ~ as.factor(gender_match) +
                data = bone)
 
 summary(red_model)
-plot(survfit(red_model))
+plot(survfit(red_model), xlim = c(0, 150))
 abline(a = 0.75, b = 0, col = "red")
 abline(a = 0.50, b = 0, col = "green")
 abline(a = 0.25, b = 0, col = "purple")
@@ -841,7 +840,7 @@ other_mod <- coxph(obj ~ as.factor(stem_cell_source) +
                data = bone)
 
 summary(other_mod)
-plot(survfit(other_mod))
+plot(survfit(other_mod), xlim = c(0, 150))
 abline(a = 0.75, b = 0, col = "red")
 abline(a = 0.50, b = 0, col = "green")
 abline(a = 0.25, b = 0, col = "purple")
@@ -882,7 +881,7 @@ bm <- q3 %>% filter(stem_cell_source == "bone_marrow")
 
 Plot the KM curve for the peripheral blood group - assuming we have no censoring
 ```{r}
-survival.pb.obj <- Surv(pb$survival_time)
+survival.pb.obj <- Surv(pb$survival_time, pb$survival_status)
 KM.ph.fit <- survfit(survival.pb.obj ~ 1, data = pb)
 
 plot(KM.ph.fit, xlab = "Days", ylab = "Survival Probability", conf.int=,
@@ -892,9 +891,9 @@ mark.time = TRUE, main = "Peripheral Blood Group Survival")
 
 
 
-Plot the KM curve for the bone marrow group - assuming we have no censoring
+Plot the KM curve for the bone marrow group
 ```{r}
-survival.bm.obj <- Surv(bm$survival_time)
+survival.bm.obj <- Surv(bm$survival_time, bm$survival_status)
 KM.bm.fit <- survfit(survival.bm.obj ~ 1, data = bm)
 
 plot(KM.bm.fit, xlab = "Days", ylab = "Survival Probability", conf.int=,
@@ -903,12 +902,12 @@ mark.time = TRUE, main = "Bone Marrow Group Survival")
 
 
 
-Plotting KM for both groups together overall and by treatment method (again assuming no censoring)
+Plotting KM for both groups together overall and by treatment method
 
 
 
 ```{r,fig.width=9}
-survival.obj <- Surv(q3$survival_time)
+survival.obj <- Surv(q3$survival_time, q3$survival_status)
 KM.fit1 <- survfit(survival.obj ~ 1, type = "kaplan-meier")
 
 
@@ -939,6 +938,8 @@ ggsurvplot(KM.fit2, data=q3) +
   ggtitle("Survival by Blood Source")
 ```
 
+**do a log rank test**
+
 
 ### Analysis:
 Mean survival time is usually not a good summary measure; the mean is pulled
@@ -952,10 +953,7 @@ Use this if we need specific survival times
 summary(KM.fit1)
 ```
 
-Overall Median Survival (50%) = 676 days
-```{r}
-KM.fit1
-```
+we don't have a median--fewer than half of the subjects died
 
 ```{r}
 summary(q3$survival_time)
