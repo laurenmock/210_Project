@@ -541,6 +541,16 @@ Firstly we know that we have a categorical value survival_status (dead = 1, aliv
 
 3) We can look at other models for survival analysis by undergoing a new model selection and analyze those findings
 
+
+## Some Survival EDA
+
+```{r}
+hist(bone$survival_time, breaks = 30)
+```
+
+
+
+
 #### 1) Survival Analysis with CD3 and CD34 doses as predictors based on previous research.  
 
 We can fit the model and see the summary below. We see that the predictor CD3 dosage is significant, when both predictor variables are included. CD34 dosage is significant when only CD34 dosage is included. These finding align with the research findings previously mentioned.
@@ -548,11 +558,12 @@ We can fit the model and see the summary below. We see that the predictor CD3 do
 The estimated hazard ratio for mortality associated with a one unit higher CD3 dose compared to those with on unit lower is 0.91621 (95% CI: 0.845, 0.9934), holding all other covariates constant, which indicates on average a 8.4% decrease in mortality. When we explore only the model with CD34 as a predictor, the estimated hazard ratio for mortality associated with a one unit higher CD34 dose compared to those with one unit lower is 0.97131 (95% CI: 0.9454, 0.9979), which indicates on average a 2.9% decrease in mortality. Both of these findings indicate a protective effect against mortality when increasing the dosage of CD3 and CD34. 
 
 
+
 ```{r}
-# compare cd34 and cd3 in survival model 
+# compare cd34 and cd3 in survival model adjusting for age - b/c younger ages recieved more dosage (read that this was a possible confounder)
 
 cox_obj <- Surv(bone$survival_time, bone$survival_status)
-cox_mod <- coxph(cox_obj ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1e8_per_kg, data = bone, ties = "exact")
+cox_mod <- coxph(cox_obj ~ CD34_x1e6_per_kg...CD34kgx10d6 + CD3_x1e8_per_kg + recipient_age_below_10, data = bone, ties = "exact")
 
 # provide score and LR test statistic
 summary(cox_mod)
@@ -757,11 +768,13 @@ backward_model <- step(full_model,
                     
 summary(backward_model)
 ```
-
+## why isn't the backwards model working?
 
 
 
 Let's try a survival analysis with the variables from the forward and step model since there are fewer variables and a higher adjusted R^2
+
+## Kaplan Meier
 ```{r}
 obj <- Surv(bone$survival_time, bone$survival_status)
 
@@ -784,7 +797,9 @@ abline(a = 0.25, b = 0, col = "purple")
 
 Cox Proportional Hazards Model
 
+**include log rank test**
 ```{r}
+# Variables: gender_match, stem_cell_source, CD34, PLT, extensive_chronic_GvHD, HLA_mismatch
 full_model <- coxph(obj ~ as.factor(gender_match) + 
                   as.factor(stem_cell_source) + 
                   CD34_x1e6_per_kg...CD34kgx10d6 +
@@ -802,7 +817,7 @@ abline(a = 0.25, b = 0, col = "purple")
 
 
 # Model with only significant p-values from model selection above
-
+# Variables: gender_match, stem_cell_source, extensive_chronic_GvHD
 red_model <- coxph(obj ~ as.factor(gender_match) + 
                   as.factor(stem_cell_source) + 
                   as.factor(extensive_chronic_GvHD), 
@@ -817,6 +832,8 @@ abline(a = 0.25, b = 0, col = "purple")
 
 
 
+#Model 3
+# Variables: stem_cell_source, extensive_chronic_GvHD, PLT
 other_mod <- coxph(obj ~ as.factor(stem_cell_source) + 
                      as.factor(extensive_chronic_GvHD) +
                      PLT_recovery, 
@@ -839,9 +856,187 @@ abline(a = 0.25, b = 0, col = "purple")
 
 ## Secondary Question - Chances of survival for each source of bone marrow
 
-In one of our secondary questions, we ask if one of sources of bone marrow (either from peripheral stem cell or bone marrow stem cell) has a greater chance of survival than the other. We can use a survival analysis model to calculate the hazard rate with stem cell source being our variable. 
+In one of our secondary questions, we ask if one of sources of bone marrow (either from peripheral stem cell or bone marrow stem cell) has a greater chance of survival than the other. We can use a survival analysis model to calculate the hazard rate with stem cell source being our variable and compare if one method of transplant had a greater chance of survival than another:
+
+2 groups: peripheral_blood & bone_marrow
+
+```{r}
+sum(bone$stem_cell_source == "peripheral_blood")
+sum(bone$stem_cell_source == "bone_marrow")
+```
+
+these are imbalanced - how to deal with this?
+
+Kaplan Meier curve cannot account for any covariates, but we can take censoring into account. This is basically an EDA of the survival curve
 
 
+
+```{r}
+q3 <- bone %>% select(stem_cell_source, survival_time, survival_status)
+head(q3)
+
+pb <- q3 %>% filter(stem_cell_source == "peripheral_blood")
+bm <- q3 %>% filter(stem_cell_source == "bone_marrow")
+
+```
+
+Plot the KM curve for the peripheral blood group - assuming we have no censoring
+```{r}
+survival.pb.obj <- Surv(pb$survival_time)
+KM.ph.fit <- survfit(survival.pb.obj ~ 1, data = pb)
+
+plot(KM.ph.fit, xlab = "Days", ylab = "Survival Probability", conf.int=,
+mark.time = TRUE, main = "Peripheral Blood Group Survival")
+```
+
+
+
+
+Plot the KM curve for the bone marrow group - assuming we have no censoring
+```{r}
+survival.bm.obj <- Surv(bm$survival_time)
+KM.bm.fit <- survfit(survival.bm.obj ~ 1, data = bm)
+
+plot(KM.bm.fit, xlab = "Days", ylab = "Survival Probability", conf.int=,
+mark.time = TRUE, main = "Bone Marrow Group Survival")
+```
+
+
+
+Plotting KM for both groups together overall and by treatment method (again assuming no censoring)
+
+
+
+```{r,fig.width=9}
+survival.obj <- Surv(q3$survival_time)
+KM.fit1 <- survfit(survival.obj ~ 1, type = "kaplan-meier")
+
+
+# Overall
+KM.fit1 <- survfit(survival.obj ~ 1, data = q3)
+plot(KM.fit1, xlab = "Days", ylab = "Survival Probability", conf.int = FALSE,
+mark.time = TRUE, main = "Overall Survival Curve", lwd = 2)
+
+
+# By treatment
+KM.fit2 <- survfit(survival.obj ~ stem_cell_source, data = q3)
+plot(KM.fit2, xlab = "Days", ylab = "Survival Probability", mark.time = TRUE,
+col = c("pink", "blue"), main = "Survival by Blood Source", lwd = 2)
+legend(x = 2000, y = 0.95, 
+       legend = c("Bone Marrow", "Peripheral Blood"), 
+       col = c("pink", "blue"), 
+       bty = "n",
+       lty = 1:1,
+       lwd = 2,
+       cex = 1.5)
+```
+
+
+```{r}
+# Same thing but with ggplot
+
+ggsurvplot(KM.fit2, data=q3) +
+  ggtitle("Survival by Blood Source")
+```
+
+
+### Analysis:
+Mean survival time is usually not a good summary measure; the mean is pulled
+up toward the outlying values (and there may be censored values, making
+estimation of the mean difficult). Instead, estimation of the median and percentiles of the survival distribution is typically preferable.
+
+
+### Overall
+Use this if we need specific survival times
+```{r}
+summary(KM.fit1)
+```
+
+Overall Median Survival (50%) = 676 days
+```{r}
+KM.fit1
+```
+
+```{r}
+summary(q3$survival_time)
+```
+
+
+```{r}
+plot(KM.fit1, xlab = "Days", ylab = "Survival Probability", conf.int = FALSE,
+mark.time = TRUE, main = "Overall Survival Curve", lwd = 2)
+abline(h = 0.50, col = "green")
+abline(h = 0.75, col = "green")
+abline(h = 0.25, col = "green")
+```
+
+
+
+### Statistics for each source group
+Median Survival:
+```{r}
+KM.fit2
+```
+
+Mean Survival - not very reliable
+```{r}
+mean(q3$survival_time)
+```
+
+
+
+```{r}
+plot(KM.fit2, xlab = "Days", ylab = "Survival Probability", mark.time = TRUE,
+col = c("pink", "blue"), main = "Survival by Blood Source", lwd = 2)
+legend(x = 2000, y = 0.99, 
+       legend = c("Bone Marrow", "Peripheral Blood"), 
+       col = c("pink", "blue"), 
+       bty = "n",
+       lty = 1:1,
+       lwd = 2,
+       cex = 1)
+abline(h = 0.50, col = "green")
+abline(h = 0.75, col = "green")
+abline(h = 0.25, col = "green")
+
+```
+
+
+
+### Log Rank Test to look at differences between treatments
+The log-rank test is a nonparametric test of the difference in survival curves.
+– Test is most powerful when the proportional hazards assumption holds (i.e. the
+survival/hazard curves of the two groups do not cross. *This does not hold becasue survival curves of the two groups cross* (The test is still valid but it is underpowered)
+
+H0: S1(t) = S2(t)
+H1: S1(t) /= S2(t)
+
+We get a p-value of 0.2 indicating that we fail to reject the null hypothesis
+
+**Does this make sense??**
+
+
+```{r}
+survdiff(Surv(q3$survival_time) ~ stem_cell_source, data = q3)
+```
+
+Critical value
+```{r}
+qchisq(.95, df = 1, lower.tail = TRUE)
+```
+
+```{r}
+1-pchisq(1.8, df = 1)
+```
+.1797125 > 0.05
+
+
+
+
+
+
+
+## Cox Model
 
 The estimated hazard ratio for mortality for the stem cell source of peripheral blood compared to bone marrow is 0.6259, on average, (95% CI: 0.3899, 1.005) holding all other covariates constant, which indicates a 37.4% decrease in mortality. This finding indicates a positive effect against mortality when using peripheral blodd as a stem cell source rather than bone marrow. This fact also supports our exploratory graph below.
 
@@ -851,6 +1046,10 @@ cox_mod_source <- coxph(obj ~ as.factor(stem_cell_source), data = bone, ties = "
 # provide score and LR test statistic
 summary(cox_mod_source)
 plot(survfit(cox_mod_source))
+
+#peripheral is less painful than bone marrow (donor can choose and have an influence on the deciscion)
+#Adjust 
+#One has a greater chance in leading to GvHD because it has more T-cells
 ```
 
 ```{r}
