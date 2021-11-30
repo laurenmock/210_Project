@@ -961,28 +961,44 @@ KM.fit1
 summary(q3$survival_time)
 ```
 
+After 163 days (~5 months) into the study, more than 25% of the study population experinecd the event (death)
+After 676 days (~1.8 years) into the study, more than 50% of the study population experienced the event (Death)
+After 1,615 days (~4.4 years) into the study,more than 75% of the study population experineced the event (death)
+
+The mean survival time was about 938 days (~2.5 years) (The mean is pulled upwards unlike the median)
+
+
+
+
 
 ```{r}
 plot(KM.fit1, xlab = "Days", ylab = "Survival Probability", conf.int = FALSE,
 mark.time = TRUE, main = "Overall Survival Curve", lwd = 2)
-abline(h = 0.50, col = "green")
-abline(h = 0.75, col = "green")
-abline(h = 0.25, col = "green")
+abline(a = 0.75, b = 0, col = "red")
+abline(a = 0.50, b = 0, col = "green")
+abline(a = 0.25, b = 0, col = "purple")
+#median
+abline(v=676, col = "blue")
+#mean
+abline(v=938.7, col = "blue", lty="dashed")
+
 ```
 
 
 
 ### Statistics for each source group
+```{r}
+summary(KM.fit2)
+```
+
 Median Survival:
 ```{r}
 KM.fit2
 ```
 
-Mean Survival - not very reliable
-```{r}
-mean(q3$survival_time)
-```
+For the bone marrow group, after 428 days into the study, 50% of the study population had experienced the event (Death)
 
+For the peripheral blood group, after 704 days into the study, 50% of the study population had experienced the event (Death)
 
 
 ```{r}
@@ -1031,6 +1047,24 @@ qchisq(.95, df = 1, lower.tail = TRUE)
 .1797125 > 0.05
 
 
+### Graphs with CI
+ 
+#### Overall
+```{r, fig.width=8}
+# Log-log CI
+par(mfrow = c(1,2))
+KM.fit.logCI <- survfit(survival.obj ~ 1, type = "kaplan-meier", conf.type = "log-log")
+
+#summary(KM.fit) # use this to see CI values
+plot(KM.fit.logCI, xlab = "Days", ylab = "Survival Probability", main = "Log-Log CIs", mark.time = TRUE)
+
+
+# Linear CI
+KM.fit.linCI <- survfit(survival.obj ~ 1, type = "kaplan-meier", conf.type = "plain")
+#summary(KM.fit) # use this to see CI values
+
+plot(KM.fit.linCI, xlab = "Days", ylab = "Survival Probability", main = "Linear CIs", mark.time = TRUE)
+```
 
 
 
@@ -1076,7 +1110,7 @@ tab20 <- tab20 %>% data.frame()
 
 p20 <- ggplot(aes(Var2, Freq, fill = Var1), data = tab20) + 
   geom_col(position = "dodge") +
-  xlab("Stem Cell Suurce") +
+  xlab("Stem Cell Source") +
   ylab ("Density (%)") +
   labs(fill='status') +
   scale_fill_manual(values=c("#990000", "burlywood2"))+
