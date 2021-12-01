@@ -879,7 +879,7 @@ bm <- q3 %>% filter(stem_cell_source == "bone_marrow")
 
 ```
 
-Plot the KM curve for the peripheral blood group - assuming we have no censoring
+Plot the KM curve for the peripheral blood group
 ```{r}
 survival.pb.obj <- Surv(pb$survival_time, pb$survival_status)
 KM.ph.fit <- survfit(survival.pb.obj ~ 1, data = pb)
