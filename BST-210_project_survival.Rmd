@@ -1,0 +1,245 @@
+---
+title: "BST 210 Project: Survival Analysis"
+author: "Lauren Mock"
+date: "11/30/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(survival)
+library(survminer)
+```
+
+
+# Stem Cell Source
+
+## Read in Data
+
+```{r}
+bone <- read.csv("data.csv")
+
+# remove HLA_match_raw (was already converted into a different column)
+bone <- select(bone, -HLA_match_raw)
+
+
+# convert numeric columns to numeric
+bone_num <- c("donor_age", "recipient_age", "recipient_body_mass", "CD34_x1e6_per_kg...CD34kgx10d6",
+           "CD3_x1e8_per_kg", "CD3_to_CD34_ratio", "ANC_recovery", "PLT_recovery",
+           "time_to_acute_GvHD_III_IV", "survival_time", "survival_status")
+
+bone[,bone_num] <- lapply(bone_num, function(x) as.numeric(bone[[x]]))
+```
+
+
+## Compare Kaplan-Meier curves for the two stem cell sources
+
+### filter data
+
+```{r}
+# sources <- bone %>% select(stem_cell_source, survival_time, survival_status)
+# head(sources)
+# 
+# pb <- sources %>% filter(stem_cell_source == "peripheral_blood")
+# bm <- sources %>% filter(stem_cell_source == "bone_marrow")
+```
+
+### plot two separate curves
+
+```{r}
+### peripheral blood
+# survival.pb.obj <- Surv(pb$survival_time, pb$survival_status)
+# KM.ph.fit <- survfit(survival.pb.obj ~ 1, data = pb)
+# 
+# plot(KM.ph.fit, xlab = "Days", ylab = "Survival Probability", conf.int=,
+# mark.time = TRUE, main = "Peripheral Blood Group Survival")
+# 
+# 
+# ### bone marrow
+# survival.bm.obj <- Surv(bm$survival_time, bm$survival_status)
+# KM.bm.fit <- survfit(survival.bm.obj ~ 1, data = bm)
+# 
+# plot(KM.bm.fit, xlab = "Days", ylab = "Survival Probability", conf.int=,
+# mark.time = TRUE, main = "Bone Marrow Group Survival")
+```
+
+### plot both curves together
+
+```{r,fig.width=9}
+survival.obj <- Surv(time = bone$survival_time, event = bone$survival_status)
+
+# Overall
+KM.fit1 <- survfit(survival.obj ~ 1, data = bone)
+plot(KM.fit1, xlab = "Days", ylab = "Survival Probability", conf.int = FALSE,
+mark.time = TRUE, main = "Kaplan-Meier Survival Curve", lwd = 2)
+
+
+# By treatment
+KM.fit2 <- survfit(survival.obj ~ stem_cell_source, data = bone)
+plot(KM.fit2, xlab = "Days After Transplant", ylab = "Survival Probability", mark.time = TRUE, conf.int=, 
+     col = c("coral", "dodgerblue"), main = "Kaplan-Meier Survival Curves by Stem Cell Source", lwd = 2)
+legend(x = 2000, y = 0.95, 
+       legend = c("Peripheral Blood", "Bone Marrow"), 
+       col = c("dodgerblue", "coral"), 
+       bty = "n",
+       lty = 1:1,
+       lwd = 2,
+       cex = 1.5)
+```
+
+**can we get CIs on this plot??**
+
+*no confounders with KM*
+
+
+
+#### log-rank test to compare these two curves
+
+```{r}
+survdiff(Surv(bone$survival_time, bone$survival_status) ~ stem_cell_source, data=bone)
+```
+
+p-value is exactly 0.5--this means that the curves are (approximately) statistically significantly different
+
+
+
+## Cox Proportional Hazards Model
+
+```{r}
+cox_model_source <- coxph(survival.obj ~ as.factor(stem_cell_source), data = bone, ties = "exact")
+
+summary(cox_model_source)
+plot(survfit(cox_model_source))
+```
+
+# check Schoenfeld residuals
+
+```{r}
+# create plot of schoenfeld resids
+wt_sch_source <- cox.zph(cox_model_source)
+plot(wt_sch_source) # slight decrease then increase over time
+
+# check summary to see if problematic
+wt_sch_source
+```
+
+
+
+### confounders??
+
+did the authors adjust for confounders?
+no, it was an RCT
+
+we can look at the covariates that are most strongly associated with survival
+
+**looking for common causes of stem cell type and survival**
+
+we had selected for our prediction model:
+- CD3 dosage (is this related to stem cell source?)
+- rh factor
+- disease type
+- recipient body mass (which is probably closely related to age)
+
+
+DIFFERENT IDEA:
+- disease type (Anasetti article says that this could be an effect modifier)
+
+
+###try some models with possible confounders
+
+```{r}
+cox_model_source2 <- coxph(survival.obj ~ as.factor(stem_cell_source) + recipient_age + CD3_x1e8_per_kg, 
+                    data = bone, ties = "exact")
+summary(cox_model_source2)
+```
+
+this would imply that source doesn't matter as much once we adjust for dosage and age
+- need to adjust for age when we use dosage (previous authors did)
+- why do people get different doses?
+
+
+```{r}
+cox_model_source3 <- coxph(survival.obj ~ as.factor(stem_cell_source):as.factor(disease_group), 
+                    data = bone, ties = "exact")
+summary(cox_model_source3)
+```
+
+previous research mentioned interaction between disease type and stem cell source--mamy of these interactions are significant
+
+
+```{r}
+cox_model_source4 <- coxph(survival.obj ~ as.factor(stem_cell_source) +
+                                   recipient_age + CD3_x1e8_per_kg, 
+                    data = bone, ties = "exact")
+summary(cox_model_source4)
+```
+
+
+
+
+# CD3/CD34 dosage
+
+
+### plot KM curves by dosage
+
+```{r}
+# add new columns based on previous research
+bone$CD3_over_4 <- ifelse(bone$CD3_x1e8_per_kg >= 4, 1, 0)
+bone$CD34_over10 <- ifelse(bone$CD34_x1e6_per_kg...CD34kgx10d6 >= 10, 1, 0)
+
+KM.fit4 <- survfit(survival.obj ~ CD3_over_4, data = bone)
+summary(KM.fit4)
+
+plot(KM.fit4, xlab = "Days After Transplant", ylab = "Survival Probability", mark.time = TRUE, conf.int=, 
+     col = c("coral", "dodgerblue"), main = "Kaplan-Meier Survival Curves by CD3 Dosage per kg", lwd = 2)
+legend(x = 2000, y = 0.95, 
+       legend = c("CD3 dosage > 4...", "CD3 dosage < 4..."), 
+       col = c("dodgerblue", "coral"), 
+       bty = "n",
+       lty = 1:1,
+       lwd = 2,
+       cex = 1)
+```
+
+#### log-rank test to compare these two curves
+
+```{r}
+survdiff(Surv(bone$survival_time, bone$survival_status) ~ CD3_over_4, data=bone)
+```
+
+## Cox Proportional Hazards Model
+
+```{r}
+cox_model_dose <- coxph(survival.obj ~ as.factor(CD3_over_4), data = bone, ties = "exact")
+
+summary(cox_model_dose)
+plot(survfit(cox_model_dose))
+```
+
+# check Schoenfeld residuals
+
+```{r}
+# create plot of schoenfeld resids
+wt_sch_dose <- cox.zph(cox_model_dose)
+plot(wt_sch_dose) # slight decrease then increase over time
+
+# check summary to see if problematic
+wt_sch_dose
+```
+
+## confounders
+
+```{r}
+cox_model_dose2 <- coxph(survival.obj ~ as.factor(CD3_over_4) + recipient_age_below_10, data = bone, ties = "exact")
+summary(cox_model_dose2)
+```
+
+
+
+**need to remove people who are missing CD3**
+
+
