@@ -9,10 +9,11 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(survival)
 library(survminer)
+library(pander)
 ```
 
 
@@ -20,7 +21,7 @@ library(survminer)
 
 ## Read in Data
 
-```{r}
+```{r, warning=FALSE}
 bone <- read.csv("data.csv")
 
 # remove HLA_match_raw (was already converted into a different column)
@@ -38,166 +39,67 @@ bone[,bone_num] <- lapply(bone_num, function(x) as.numeric(bone[[x]]))
 
 ## Compare Kaplan-Meier curves for the two stem cell sources
 
-### filter data
-
 ```{r}
-# sources <- bone %>% select(stem_cell_source, survival_time, survival_status)
-# head(sources)
-# 
-# pb <- sources %>% filter(stem_cell_source == "peripheral_blood")
-# bm <- sources %>% filter(stem_cell_source == "bone_marrow")
-```
-
-### plot two separate curves
-
-```{r}
-### peripheral blood
-# survival.pb.obj <- Surv(pb$survival_time, pb$survival_status)
-# KM.ph.fit <- survfit(survival.pb.obj ~ 1, data = pb)
-# 
-# plot(KM.ph.fit, xlab = "Days", ylab = "Survival Probability", conf.int=,
-# mark.time = TRUE, main = "Peripheral Blood Group Survival")
-# 
-# 
-# ### bone marrow
-# survival.bm.obj <- Surv(bm$survival_time, bm$survival_status)
-# KM.bm.fit <- survfit(survival.bm.obj ~ 1, data = bm)
-# 
-# plot(KM.bm.fit, xlab = "Days", ylab = "Survival Probability", conf.int=,
-# mark.time = TRUE, main = "Bone Marrow Group Survival")
-```
-
-### plot both curves together
-
-```{r,fig.width=9}
+# survival object
 survival.obj <- Surv(time = bone$survival_time, event = bone$survival_status)
 
-# Overall
+# overall KM
 KM.fit1 <- survfit(survival.obj ~ 1, data = bone)
-plot(KM.fit1, xlab = "Days", ylab = "Survival Probability", conf.int = FALSE,
+
+# plot
+plot(KM.fit1, xlab = "Days after Transplant", ylab = "Survival Probability", conf.int = FALSE,
 mark.time = TRUE, main = "Kaplan-Meier Survival Curve", lwd = 2)
 
 
-# By treatment
+
+# KM by treatment
 KM.fit2 <- survfit(survival.obj ~ stem_cell_source, data = bone)
-plot(KM.fit2, xlab = "Days After Transplant", ylab = "Survival Probability", mark.time = TRUE, conf.int=, 
-     col = c("coral", "dodgerblue"), main = "Kaplan-Meier Survival Curves by Stem Cell Source", lwd = 2)
-legend(x = 2000, y = 0.95, 
+
+# plot
+plot(KM.fit2, xlab = "Days after Transplant", ylab = "Survival Probability", 
+     mark.time = TRUE, conf.int=, col = c("coral", "dodgerblue"), 
+     main = "Kaplan-Meier Survival Curves by Stem Cell Source", lwd = 2)
+legend(x = 2000, y = 0.99, 
        legend = c("Peripheral Blood", "Bone Marrow"), 
        col = c("dodgerblue", "coral"), 
        bty = "n",
        lty = 1:1,
        lwd = 2,
-       cex = 1.5)
+       cex = 1.3)
 ```
 
-**can we get CIs on this plot??**
-
-*no confounders with KM*
+**note: 5 people (out of 187) missing CD3**
 
 
-
-#### log-rank test to compare these two curves
+### log-rank test to compare these two curves
 
 ```{r}
 survdiff(Surv(bone$survival_time, bone$survival_status) ~ stem_cell_source, data=bone)
 ```
 
-p-value is exactly 0.5--this means that the curves are (approximately) statistically significantly different
+p-value is 0.05--almost statistically significantly different
 
 
 
-## Cox Proportional Hazards Model
+# CD3+ dosage
 
-```{r}
-cox_model_source <- coxph(survival.obj ~ as.factor(stem_cell_source), data = bone, ties = "exact")
-
-summary(cox_model_source)
-plot(survfit(cox_model_source))
-```
-
-# check Schoenfeld residuals
+## Compare Kaplan-Meier curves for high vs. low dosage
 
 ```{r}
-# create plot of schoenfeld resids
-wt_sch_source <- cox.zph(cox_model_source)
-plot(wt_sch_source) # slight decrease then increase over time
-
-# check summary to see if problematic
-wt_sch_source
-```
-
-
-
-### confounders??
-
-did the authors adjust for confounders?
-no, it was an RCT
-
-we can look at the covariates that are most strongly associated with survival
-
-**looking for common causes of stem cell type and survival**
-
-we had selected for our prediction model:
-- CD3 dosage (is this related to stem cell source?)
-- rh factor
-- disease type
-- recipient body mass (which is probably closely related to age)
-
-
-DIFFERENT IDEA:
-- disease type (Anasetti article says that this could be an effect modifier)
-
-
-###try some models with possible confounders
-
-```{r}
-cox_model_source2 <- coxph(survival.obj ~ as.factor(stem_cell_source) + recipient_age + CD3_x1e8_per_kg, 
-                    data = bone, ties = "exact")
-summary(cox_model_source2)
-```
-
-this would imply that source doesn't matter as much once we adjust for dosage and age
-- need to adjust for age when we use dosage (previous authors did)
-- why do people get different doses?
-
-
-```{r}
-cox_model_source3 <- coxph(survival.obj ~ as.factor(stem_cell_source):as.factor(disease_group), 
-                    data = bone, ties = "exact")
-summary(cox_model_source3)
-```
-
-previous research mentioned interaction between disease type and stem cell source--mamy of these interactions are significant
-
-
-```{r}
-cox_model_source4 <- coxph(survival.obj ~ as.factor(stem_cell_source) +
-                                   recipient_age + CD3_x1e8_per_kg, 
-                    data = bone, ties = "exact")
-summary(cox_model_source4)
-```
-
-
-
-
-# CD3/CD34 dosage
-
-
-### plot KM curves by dosage
-
-```{r}
-# add new columns based on previous research
+# add new binary columns based on previous research
 bone$CD3_over_4 <- ifelse(bone$CD3_x1e8_per_kg >= 4, 1, 0)
 bone$CD34_over10 <- ifelse(bone$CD34_x1e6_per_kg...CD34kgx10d6 >= 10, 1, 0)
 
+# model fit
 KM.fit4 <- survfit(survival.obj ~ CD3_over_4, data = bone)
-summary(KM.fit4)
 
-plot(KM.fit4, xlab = "Days After Transplant", ylab = "Survival Probability", mark.time = TRUE, conf.int=, 
-     col = c("coral", "dodgerblue"), main = "Kaplan-Meier Survival Curves by CD3 Dosage per kg", lwd = 2)
-legend(x = 2000, y = 0.95, 
-       legend = c("CD3 dosage > 4...", "CD3 dosage < 4..."), 
+# plot
+plot(KM.fit4, xlab = "Days after Transplant", ylab = "Survival Probability", mark.time = TRUE, conf.int=, 
+     col = c("coral", "dodgerblue"), lwd = 2,
+     main = "Kaplan-Meier Survival Curves by CD3+ Dosage per kg")
+legend(x = 1400, y = 1, 
+       legend = c(expression(paste("CD3+ dosage >= 4*", 10^8, " per kg weight")), 
+                  expression(paste("CD3+ dosage < 4*", 10^8, " per kg weight"))), 
        col = c("dodgerblue", "coral"), 
        bty = "n",
        lty = 1:1,
@@ -205,41 +107,189 @@ legend(x = 2000, y = 0.95,
        cex = 1)
 ```
 
-#### log-rank test to compare these two curves
+### log-rank test to compare these two curves
 
 ```{r}
 survdiff(Surv(bone$survival_time, bone$survival_status) ~ CD3_over_4, data=bone)
 ```
 
-## Cox Proportional Hazards Model
+highly significant difference! (p-value 0.01)
+
+
+# Cox Proportional Hazards Model
+
+## unadjusted
 
 ```{r}
-cox_model_dose <- coxph(survival.obj ~ as.factor(CD3_over_4), data = bone, ties = "exact")
-
-summary(cox_model_dose)
-plot(survfit(cox_model_dose))
+cox_unadj <- coxph(survival.obj ~ as.factor(stem_cell_source) + CD3_x1e8_per_kg, 
+                        data = bone, ties = "exact")
+summary(cox_unadj)
 ```
 
-# check Schoenfeld residuals
+## Confounders?
+
+**looking for common causes of stem cell type and survival or common causes of dosage and survival**
+
+did the authors adjust for confounders?
+no, it was an RCT
+
+
+possible confounders
+- always must adjust for age when adjusting for dosage
+- disease type (Anasetti article says that this could be an effect modifier by interacting with stem cell source)
+
+
+### look at dosage distribution by source
+
+```{r, warning=FALSE}
+bone %>% ggplot(aes(x = stem_cell_source, y = CD3_x1e8_per_kg)) +
+        geom_boxplot() + 
+        ggtitle("CD3+ Dosage per kg by Stem Cell Source") +
+        xlab("Stem Cell Source") +
+        ylab(expression(paste("CD3+ x ", 10^8, " dosage per kg weight"))) +
+        scale_x_discrete(labels = c("Bone Marrow", "Peripheral Blood"))
+```
+
+- people who get bone marrow always get a much smaller dose
+- this could definitely be a confounder, so we'll keep both stem cell source and dose in the model
+- interpretation will be "given that someone received this source, what was the effect of the dosage?"
+
+### look at dosage distribution by age
+
+```{r}
+bone %>% ggplot(aes(x = recipient_age_below_10, y = CD3_x1e8_per_kg)) +
+        geom_boxplot() + 
+        ggtitle("CD3+ Dosage per kg by Age") +
+        xlab("Stem Cell Source") +
+        ylab(expression(paste("CD3+ x ", 10^8, " dosage per kg weight"))) +
+        scale_x_discrete(labels = c("Older than 10", "Younger than 10"))
+```
+
+younger people are more likely to get higher doses (per kg body weight), which makes sense because they are also more likely to get peripheral blood (given in higher doses than bone marrow)
+
+
+### look at source by recipient age
+
+```{r}
+bone %>% ggplot(aes(x = stem_cell_source, y = recipient_age)) +
+        geom_boxplot() +
+        ggtitle("Recipient Age by Stem Cell Source") +
+        xlab("Stem Cell Source") +
+        ylab("Recipient Age") +
+        scale_x_discrete(labels = c("Bone Marrow", "Peripheral Blood"))
+```
+reasonably similar age distributions
+
+### look at source by donor age
+
+```{r}
+bone %>% ggplot(aes(x = stem_cell_source, y = donor_age)) +
+        geom_boxplot() +
+        ggtitle("Recipient Age by Stem Cell Source") +
+        xlab("Stem Cell Source") +
+        ylab("Recipient Age") +
+        scale_x_discrete(labels = c("Bone Marrow", "Peripheral Blood"))
+```
+
+reasonably similar age distributions
+
+### GVHD by dose
+
+```{r}
+bone %>% ggplot(aes(x = acute_GvHD_II_III_IV, y = CD3_x1e8_per_kg)) +
+        geom_boxplot() +
+        ggtitle("CD3+ Dosage and Acute GVHD") +
+        xlab("Presence of Acute GVHD (Stage II, III, or IV)") +
+        ylab(expression(paste("CD3+ x ", 10^8, " dosage per kg weight (log scale)"))) +
+        scale_x_discrete(labels = c("No", "Yes")) + 
+        scale_y_log10() +
+        facet_grid( ~ stem_cell_source, 
+                    labeller = as_labeller(c(`bone_marrow` = "Bone Marrow", 
+                                             `peripheral_blood` = "Peripheral Blood")))
+```
+
+no apparent relationship between high dose of CD3+ and GVHD for either stem cell source
+
+## confounders
+
+### adjusted model 1
+
+```{r}
+cox_adj1 <- coxph(survival.obj ~ as.factor(stem_cell_source) + CD3_x1e8_per_kg + recipient_age, 
+                        data = bone, ties = "exact")
+summary(cox_adj1)
+```
+
+adding age changed the stem cell source coefficient by > 10%
+
+
+### adjusted model 2
+
+check interaction between stem cell source and disease type (Anasetti et al.)
+
+```{r}
+cox_adj2 <- coxph(survival.obj ~ as.factor(stem_cell_source):as.factor(disease), 
+                    data = bone, ties = "exact")
+summary(cox_adj2)
+```
+
+definitely some significant results, but need to check that we have enough people in each covariate pattern
+
+
+#### check covariate patterns for disease type and stem cell source interaction
+
+```{r}
+bone %>% 
+        group_by(disease, stem_cell_source) %>%
+        count() %>%
+        pander()
+```
+
+Peripheral blood was more common than bone marrow for all five diseases. Unfortunately, we do not have enough people in each covariate pattern to include this interaction term in our model. For example, all 9 patients who had lymphoma died, so we cannot look at the interaction between lymphoma and stem cell source.
+
+
+### adjusted model 3
+
+```{r}
+cox_adj3 <- coxph(survival.obj ~ as.factor(stem_cell_source) + CD3_x1e8_per_kg + recipient_age + as.factor(CMV_status), 
+                        data = bone, ties = "exact")
+summary(cox_adj3)
+```
+
+adding CMV status changes stem cell source coefficient less than 10%
+
+
+
+**final model = adjusted model 1**
+
+## does the benefit of a higher dose of CD3+ just keep increasing?
+
+```{r}
+bone %>% ggplot(aes(x = as.factor(survival_status), y = CD3_x1e8_per_kg)) +
+        geom_boxplot() +
+        ggtitle("CD3+ Dosage and Survival") +
+        xlab("Survival Status at End of Follow-Up") +
+        ylab(expression(paste("CD3+ x ", 10^8, " dosage per kg weight (log scale)"))) +
+        scale_x_discrete(labels = c("Survived", "Died")) + 
+        scale_y_log10() +
+        facet_grid( ~ stem_cell_source, 
+                    labeller = as_labeller(c(`bone_marrow` = "Bone Marrow", 
+                                             `peripheral_blood` = "Peripheral Blood")))
+```
+
+People who survived seem to have gotten higher CD3+ doses among both stem cell source types (but this may not be statistically significant).
+
+
+
+## check Schoenfeld residuals for proportional hazards assumption
 
 ```{r}
 # create plot of schoenfeld resids
-wt_sch_dose <- cox.zph(cox_model_dose)
+wt_sch_dose <- cox.zph(cox_adj1)
 plot(wt_sch_dose) # slight decrease then increase over time
 
 # check summary to see if problematic
 wt_sch_dose
 ```
-
-## confounders
-
-```{r}
-cox_model_dose2 <- coxph(survival.obj ~ as.factor(CD3_over_4) + recipient_age_below_10, data = bone, ties = "exact")
-summary(cox_model_dose2)
-```
-
-
-
-**need to remove people who are missing CD3**
 
 
