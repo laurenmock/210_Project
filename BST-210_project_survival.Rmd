@@ -259,10 +259,19 @@ definitely some significant results, but need to check that we have enough peopl
 #### check covariate patterns for disease type and stem cell source interaction
 
 ```{r}
-bone %>% 
+cov_patterns <- bone %>% 
         group_by(disease, stem_cell_source) %>%
         count() %>%
-        pander()
+        spread(stem_cell_source, n) %>%
+        rename(Disease = "disease",
+                `Bone Marrow` = "bone_marrow",
+                `Peripheral Blood` = "peripheral_blood")
+
+# rename ALL and AML
+cov_patterns$Disease[1:2] <- c("acute lymphoblastic leukemia", "acute myeloid leukemia")
+
+# print table
+cov_patterns %>% pander()
 ```
 
 Peripheral blood was more common than bone marrow for all five diseases. Unfortunately, we do not have enough people in each covariate pattern to include this interaction term in our model. For example, all 9 patients who had lymphoma died, so we cannot look at the interaction between lymphoma and stem cell source.
